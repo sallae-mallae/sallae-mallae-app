@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sallae_mallae_app/app/app.dart';
+import 'package:sallae_mallae_app/features/splash/presentation/splash_screen.dart';
 
 void main() {
   testWidgets('App renders splash route', (WidgetTester tester) async {
@@ -8,6 +9,6 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.byType(SallaeMallaeApp), findsOneWidget);
+    expect(find.byType(SplashScreen), findsOneWidget);
   });
 }
