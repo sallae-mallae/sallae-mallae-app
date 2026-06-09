@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sallae_mallae_app/features/camera/presentation/home_camera_screen.dart';
 import 'package:sallae_mallae_app/features/history/presentation/history_screen.dart';
@@ -33,14 +32,3 @@ final appRouter = GoRouter(
     ),
   ],
 );
-
-class PlaceholderScreen extends StatelessWidget {
-  final String title;
-
-  const PlaceholderScreen({required this.title, super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(body: Center(child: Text(title)));
-  }
-}

@@ -3,5 +3,5 @@ abstract final class RoutePaths {
   static const permissionsGuide = '/permission-guide';
   static const home = '/home';
   static const history = '/history';
-  static const settings = 'settings';
+  static const settings = '/settings';
 }
