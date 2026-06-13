@@ -9,6 +9,10 @@ class CameraControllerManager {
 
   bool get isInitialized => _controller?.value.isInitialized ?? false;
 
+  Future<List<CameraDescription>> getAvailableCameras() async {
+    return availableCameras();
+  }
+
   Future<void> isInitialize() async {}
 
   Future<void> startImageStream(
