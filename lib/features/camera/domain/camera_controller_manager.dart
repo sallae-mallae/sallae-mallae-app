@@ -13,6 +13,17 @@ class CameraControllerManager {
     return availableCameras();
   }
 
+  CameraDescription? selectBackCamera(List<CameraDescription> cameras) {
+    if (cameras.isEmpty) {
+      return null;
+    }
+
+    return cameras.firstWhere(
+      (camera) => camera.lensDirection == CameraLensDirection.back,
+      orElse: () => cameras.first,
+    );
+  }
+
   Future<void> isInitialize() async {}
 
   Future<void> startImageStream(
