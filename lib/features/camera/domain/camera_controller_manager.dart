@@ -1,0 +1,25 @@
+import 'package:camera/camera.dart';
+
+class CameraControllerManager {
+  CameraController? _controller;
+
+  CameraController? get controller => _controller;
+
+  bool get hasController => _controller != null;
+
+  bool get isInitialized => _controller?.value.isInitialized ?? false;
+
+  Future<void> isInitialize() async {}
+
+  Future<void> startImageStream(
+    void Function(CameraImage image) onAvailable,
+  ) async {}
+
+  Future<void> stopImageStream() async {}
+
+  Future<XFile?> takePicture() async {
+    return null;
+  }
+
+  Future<void> dispose() async {}
+}
