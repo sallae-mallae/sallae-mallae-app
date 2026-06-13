@@ -24,7 +24,25 @@ class CameraControllerManager {
     );
   }
 
-  Future<void> isInitialize() async {}
+  Future<void> initialize() async {
+    final cameras = await getAvailableCameras();
+    final selectedCamera = selectBackCamera(cameras);
+
+    if (selectedCamera == null) {
+      throw StateError('No available cameras.');
+    }
+
+    final controller = CameraController(
+      selectedCamera,
+      ResolutionPreset.high,
+      enableAudio: false,
+      imageFormatGroup: ImageFormatGroup.yuv420,
+    );
+
+    await controller.initialize();
+
+    _controller = controller;
+  }
 
   Future<void> startImageStream(
     void Function(CameraImage image) onAvailable,
