@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -20,6 +22,10 @@ class CameraNotifier extends Notifier<CameraState> {
 
   @override
   CameraState build() {
+    ref.onDispose(() {
+      unawaited(_manager.dispose());
+    });
+
     return const CameraState.initial();
   }
 
@@ -81,6 +87,14 @@ class CameraNotifier extends Notifier<CameraState> {
     } finally {
       state = state.copyWith(isTakingPicture: false);
     }
+  }
+
+  Future<void> disposeCamera() async {
+    await _manager.dispose();
+
+    _lastProcessedAt = null;
+    _isProcessingFrame = false;
+    state = const CameraState.initial();
   }
 
   void _handleCameraImage(CameraImage _) {

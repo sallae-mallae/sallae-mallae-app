@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,14 +15,36 @@ class HomeCameraScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeCameraScreen> createState() => _HomeCameraScreenState();
 }
 
-class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen> {
+class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     Future.microtask(() {
       ref.read(cameraProvider.notifier).initializeCamera();
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      unawaited(ref.read(cameraProvider.notifier).disposeCamera());
+      return;
+    }
+
+    if (state == AppLifecycleState.resumed) {
+      unawaited(ref.read(cameraProvider.notifier).initializeCamera());
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(ref.read(cameraProvider.notifier).disposeCamera());
+    super.dispose();
   }
 
   @override

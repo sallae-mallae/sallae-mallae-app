@@ -25,6 +25,8 @@ class CameraControllerManager {
   }
 
   Future<void> initialize() async {
+    await dispose();
+
     final cameras = await getAvailableCameras();
     final selectedCamera = selectBackCamera(cameras);
 
@@ -88,5 +90,18 @@ class CameraControllerManager {
     return controller.takePicture();
   }
 
-  Future<void> dispose() async {}
+  Future<void> dispose() async {
+    final controller = _controller;
+
+    if (controller == null) {
+      return;
+    }
+
+    if (controller.value.isInitialized && controller.value.isStreamingImages) {
+      await controller.stopImageStream();
+    }
+
+    await controller.dispose();
+    _controller = null;
+  }
 }
