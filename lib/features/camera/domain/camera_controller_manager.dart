@@ -46,12 +46,46 @@ class CameraControllerManager {
 
   Future<void> startImageStream(
     void Function(CameraImage image) onAvailable,
-  ) async {}
+  ) async {
+    final controller = _controller;
 
-  Future<void> stopImageStream() async {}
+    if (controller == null || !controller.value.isInitialized) {
+      throw StateError('Camera controller is not initialized.');
+    }
+
+    if (controller.value.isStreamingImages) {
+      return;
+    }
+
+    await controller.startImageStream(onAvailable);
+  }
+
+  Future<void> stopImageStream() async {
+    final controller = _controller;
+
+    if (controller == null || !controller.value.isInitialized) {
+      return;
+    }
+
+    if (!controller.value.isStreamingImages) {
+      return;
+    }
+
+    await controller.stopImageStream();
+  }
 
   Future<XFile?> takePicture() async {
-    return null;
+    final controller = _controller;
+
+    if (controller == null || !controller.value.isInitialized) {
+      return null;
+    }
+
+    if (controller.value.isTakingPicture) {
+      return null;
+    }
+
+    return controller.takePicture();
   }
 
   Future<void> dispose() async {}
