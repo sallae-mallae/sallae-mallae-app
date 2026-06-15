@@ -99,7 +99,7 @@ class VoiceOutputNotifier extends Notifier<VoiceOutputState> {
     state = state.copyWith(isSpeaking: false);
   }
 
-  void _handleError(String _) {
+  void _handleError(dynamic _) {
     state = state.copyWith(
       isSpeaking: false,
       errorMessage: '응답을 음성으로 재생할 수 없습니다.',

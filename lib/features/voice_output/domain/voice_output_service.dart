@@ -36,4 +36,4 @@ class VoiceOutputService {
 
 typedef VoidCallback = void Function();
 
-typedef TtsErrorListener = void Function(String message);
+typedef TtsErrorListener = void Function(dynamic message);
