@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../speech_input/data/models/speech_input_state.dart';
 import '../../speech_input/domain/speech_input_provider.dart';
+import '../../voice_output/domain/voice_output_provider.dart';
 import '../data/models/camera_state.dart';
 import '../domain/camera_provider.dart';
 
@@ -31,6 +32,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     Future.microtask(() {
       ref.read(cameraProvider.notifier).initializeCamera();
       ref.read(speechInputProvider.notifier).initialize();
+      ref.read(voiceOutputProvider.notifier).initialize();
     });
   }
 
@@ -40,12 +42,14 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
         state == AppLifecycleState.paused) {
       unawaited(ref.read(cameraProvider.notifier).disposeCamera());
       unawaited(ref.read(speechInputProvider.notifier).cancelListening());
+      unawaited(ref.read(voiceOutputProvider.notifier).stop());
       return;
     }
 
     if (state == AppLifecycleState.resumed) {
       unawaited(ref.read(cameraProvider.notifier).initializeCamera());
       unawaited(ref.read(speechInputProvider.notifier).initialize());
+      unawaited(ref.read(voiceOutputProvider.notifier).initialize());
     }
   }
 
@@ -54,6 +58,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     WidgetsBinding.instance.removeObserver(this);
     unawaited(ref.read(cameraProvider.notifier).disposeCamera());
     unawaited(ref.read(speechInputProvider.notifier).cancelListening());
+    unawaited(ref.read(voiceOutputProvider.notifier).stop());
     _questionController.removeListener(_handleQuestionTextChanged);
     _questionController.dispose();
     super.dispose();
