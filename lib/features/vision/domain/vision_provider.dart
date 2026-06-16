@@ -11,7 +11,6 @@ import '../data/services/mlkit_object_detection_service.dart';
 import '../data/services/mlkit_text_recognition_service.dart';
 import 'entities/crop_candidate.dart';
 import 'entities/detected_product.dart';
-import 'entities/frame_quality.dart';
 import 'entities/product_bounding_box.dart';
 import 'entities/vision_context.dart';
 import 'services/object_detection_service.dart';
@@ -172,11 +171,11 @@ class VisionNotifier extends Notifier<VisionContext> {
         .toDouble();
     final centerX = sourceBox.centerX;
     final centerY = sourceBox.centerY;
-    final left = (centerX - paddedSide / 2).clamp(
+    final left = (centerX - constrainedSide / 2).clamp(
       0,
       imageSize.width - constrainedSide,
     );
-    final top = (centerY - paddedSide / 2).clamp(
+    final top = (centerY - constrainedSide / 2).clamp(
       0,
       imageSize.height - constrainedSide,
     );
