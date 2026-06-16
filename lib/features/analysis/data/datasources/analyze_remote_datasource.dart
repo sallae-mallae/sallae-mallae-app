@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:sallae_mallae_app/core/errors/app_exception.dart';
+import 'package:sallae_mallae_app/core/network/api_error_mapper.dart';
 
 import '../models/analyze_request.dart';
 import '../models/analyze_response.dart';
@@ -12,9 +13,13 @@ abstract interface class AnalyzeRemoteDatasource {
 }
 
 class DioAnalyzeRemoteDatasource implements AnalyzeRemoteDatasource {
-  const DioAnalyzeRemoteDatasource(this._dio);
+  const DioAnalyzeRemoteDatasource(
+    this._dio, {
+    this.errorMapper = const ApiErrorMapper(),
+  });
 
   final Dio _dio;
+  final ApiErrorMapper errorMapper;
 
   @override
   Future<AnalyzeResponse> analyze({
@@ -42,7 +47,7 @@ class DioAnalyzeRemoteDatasource implements AnalyzeRemoteDatasource {
 
       return AnalyzeResponse.fromJson(data);
     } on DioException catch (error) {
-      throw AppException.fromDioException(error);
+      throw errorMapper.mapDioException(error);
     }
   }
 }

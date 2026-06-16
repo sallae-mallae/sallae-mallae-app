@@ -7,6 +7,7 @@ enum AppExceptionType {
   unauthorized,
   forbidden,
   notFound,
+  validation,
   server,
   cancelled,
   unknown,
@@ -95,6 +96,11 @@ class AppException implements Exception {
         type: AppExceptionType.notFound,
         message: '요청한 정보를 찾을 수 없습니다.',
         statusCode: 404,
+      ),
+      422 => const AppException(
+        type: AppExceptionType.validation,
+        message: '분석 요청 정보가 올바르지 않습니다.',
+        statusCode: 422,
       ),
       _ => AppException(
         type: AppExceptionType.unknown,
