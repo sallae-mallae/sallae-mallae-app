@@ -7,6 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../speech_input/data/models/speech_input_state.dart';
 import '../../speech_input/domain/speech_input_provider.dart';
+import '../../vision/domain/vision_provider.dart';
+import '../../vision/presentation/models/vision_overlay_state.dart';
+import '../../vision/presentation/widgets/camera_vision_overlay.dart';
 import '../../voice_output/domain/voice_output_provider.dart';
 import '../data/models/camera_state.dart';
 import '../domain/camera_provider.dart';
@@ -79,6 +82,9 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     });
 
     final cameraState = ref.watch(cameraProvider);
+    final visionOverlayState = VisionOverlayState.fromContext(
+      ref.watch(visionProvider),
+    );
     final speechInputState = ref.watch(speechInputProvider);
     final controller = ref.read(cameraProvider.notifier).controller;
 
@@ -87,6 +93,10 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
         child: Stack(
           children: [
             Positioned.fill(child: _buildCameraLayer(cameraState, controller)),
+            if (cameraState.canShowPreview && controller != null)
+              Positioned.fill(
+                child: CameraVisionOverlay(state: visionOverlayState),
+              ),
             Align(
               alignment: Alignment.bottomCenter,
               child: _QuestionInputPanel(
