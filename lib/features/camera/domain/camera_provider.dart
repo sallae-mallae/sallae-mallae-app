@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../vision/domain/vision_provider.dart';
 import '../data/models/camera_state.dart';
 import '../data/policies/frame_sampling_policy.dart';
 import 'camera_controller_manager.dart';
@@ -45,6 +46,8 @@ class CameraNotifier extends Notifier<CameraState> {
         isInitialized: true,
         clearErrorMessage: true,
       );
+
+      await startImageStream();
     } catch (error) {
       state = state.copyWith(
         isInitializing: false,
@@ -91,27 +94,39 @@ class CameraNotifier extends Notifier<CameraState> {
 
   Future<void> disposeCamera() async {
     await _manager.dispose();
+    await ref.read(visionProvider.notifier).disposeVision();
 
     _lastProcessedAt = null;
     _isProcessingFrame = false;
     state = const CameraState.initial();
   }
 
-  void _handleCameraImage(CameraImage _) {
+  void _handleCameraImage(CameraImage image) {
     final now = DateTime.now();
+    final visionNotifier = ref.read(visionProvider.notifier);
 
     final shouldProcess = _samplingPolicy.shouldProcess(
       now: now,
       lastProcessedAt: _lastProcessedAt,
-      isProcessing: _isProcessingFrame,
+      isProcessing: _isProcessingFrame || visionNotifier.isProcessing,
     );
 
     if (!shouldProcess) {
       return;
     }
 
+    final camera = _manager.controller?.description;
+
+    if (camera == null) {
+      return;
+    }
+
     _isProcessingFrame = true;
     _lastProcessedAt = now;
-    _isProcessingFrame = false;
+    unawaited(
+      visionNotifier
+          .analyzeCameraImage(image: image, camera: camera)
+          .whenComplete(() => _isProcessingFrame = false),
+    );
   }
 }
