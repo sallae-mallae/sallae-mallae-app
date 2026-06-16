@@ -38,8 +38,9 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.hidden) {
       unawaited(ref.read(cameraProvider.notifier).disposeCamera());
       unawaited(ref.read(speechInputProvider.notifier).cancelListening());
       unawaited(ref.read(voiceOutputProvider.notifier).stop());
