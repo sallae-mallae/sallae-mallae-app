@@ -25,6 +25,7 @@ class CameraNotifier extends Notifier<CameraState> {
   CameraState build() {
     ref.onDispose(() {
       unawaited(_manager.dispose());
+      unawaited(ref.read(visionProvider.notifier).disposeVision());
     });
 
     return const CameraState.initial();
