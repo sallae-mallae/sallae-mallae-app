@@ -1,5 +1,4 @@
 import '../../domain/entities/detected_product.dart';
-import '../../domain/entities/frame_quality.dart';
 import '../../domain/entities/ocr_candidate.dart';
 import '../../domain/entities/vision_context.dart';
 
