@@ -62,7 +62,7 @@ class _OutlinedLogoText extends StatelessWidget {
               ..color = AppColors.cardWhite.withValues(alpha: 0.92),
           ),
         ),
-        const Text(
+        Text(
           text,
           maxLines: 1,
           style: style.copyWith(color: AppColors.primary),
