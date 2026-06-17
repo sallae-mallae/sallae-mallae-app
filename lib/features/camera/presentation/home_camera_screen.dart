@@ -14,7 +14,6 @@ import '../../../features/analysis/presentation/widgets/analysis_result_view.dar
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../shared/widgets/bottom_input_bar.dart';
-import '../../../shared/widgets/login_bottom_sheet.dart';
 import '../../../shared/widgets/segmented_input_mode.dart';
 import '../../analysis/application/analysis_provider.dart';
 import '../../analysis/application/analysis_state.dart';
@@ -255,7 +254,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
 
   void _openProfile() {
     _closeDrawer();
-    showLoginBottomSheet(context);
+    context.push(RoutePaths.myPage);
   }
 
   Widget _buildCameraLayer(
