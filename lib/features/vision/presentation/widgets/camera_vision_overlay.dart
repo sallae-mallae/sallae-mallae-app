@@ -28,12 +28,17 @@ class CameraVisionOverlay extends StatelessWidget {
           if (state.hasGuideText)
             Positioned(
               top: 8,
-              left: 64,
-              right: 116,
+              left: 0,
+              right: 0,
               height: AppSpacing.topBarHeight + 2,
-              child: _QualityGuide(
-                text: state.guideText!,
-                canSuggestCapture: state.canSuggestCapture,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 150),
+                  child: _QualityGuide(
+                    text: state.guideText!,
+                    canSuggestCapture: state.canSuggestCapture,
+                  ),
+                ),
               ),
             ),
         ],

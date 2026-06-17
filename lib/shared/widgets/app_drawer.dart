@@ -20,6 +20,7 @@ class AppDrawer extends StatelessWidget {
   final AppDrawerSection selectedSection;
   final ValueChanged<AppDrawerSection>? onSectionSelected;
   final VoidCallback? onOpenSettings;
+  final VoidCallback? onOpenProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +52,7 @@ class AppDrawer extends StatelessWidget {
                             fit: BoxFit.contain,
                           ),
                           const Spacer(),
-                          _ProfileCircleButton(),
+                          _ProfileCircleButton(onTap: onOpenProfile),
                         ],
                       ),
                     ),
@@ -177,12 +178,16 @@ class _RecentText extends StatelessWidget {
 }
 
 class _ProfileCircleButton extends StatelessWidget {
+  const _ProfileCircleButton({this.onTap});
+
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
     return Tooltip(
       message: '프로필',
       child: InkWell(
-        onTap: () {},
+        onTap: onTap,
         customBorder: const CircleBorder(),
         child: Container(
           width: 38,
