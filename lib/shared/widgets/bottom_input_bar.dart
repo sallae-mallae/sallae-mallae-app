@@ -33,7 +33,10 @@ class BottomInputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.paddingOf(context).bottom;
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final bottomPadding = keyboardInset > 0
+        ? 0.0
+        : MediaQuery.paddingOf(context).bottom;
     final hintText = _hintText;
 
     return ClipRRect(

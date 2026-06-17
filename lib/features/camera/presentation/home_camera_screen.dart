@@ -112,6 +112,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     final drawerWidth = _drawerWidth(context);
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           DecoratedBox(
@@ -544,14 +545,19 @@ class _HomeCameraBody extends StatelessWidget {
               ),
               Align(
                 alignment: Alignment.bottomCenter,
-                child: BottomInputBar(
-                  controller: questionController,
-                  speechState: speechInputState,
-                  analysisState: analysisState,
-                  selectedMode: selectedInputMode,
-                  onModeSelected: onModeSelected,
-                  onToggleListening: onToggleListening,
-                  onSubmit: onSubmit,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.viewInsetsOf(context).bottom,
+                  ),
+                  child: BottomInputBar(
+                    controller: questionController,
+                    speechState: speechInputState,
+                    analysisState: analysisState,
+                    selectedMode: selectedInputMode,
+                    onModeSelected: onModeSelected,
+                    onToggleListening: onToggleListening,
+                    onSubmit: onSubmit,
+                  ),
                 ),
               ),
             ],
