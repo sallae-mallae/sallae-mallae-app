@@ -3,10 +3,17 @@ import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/router/route_paths.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_spacing.dart';
+import '../../../features/analysis/presentation/widgets/analysis_loading_view.dart';
+import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/app_top_bar.dart';
+import '../../../shared/widgets/bottom_input_bar.dart';
+import '../../../shared/widgets/segmented_input_mode.dart';
 import '../../analysis/application/analysis_provider.dart';
-import '../../analysis/application/analysis_state.dart';
 import '../../speech_input/data/models/speech_input_state.dart';
 import '../../speech_input/domain/speech_input_provider.dart';
 import '../../vision/domain/vision_provider.dart';
@@ -26,6 +33,7 @@ class HomeCameraScreen extends ConsumerStatefulWidget {
 class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     with WidgetsBindingObserver {
   late final TextEditingController _questionController;
+  InputMode _selectedInputMode = InputMode.text;
 
   @override
   void initState() {
@@ -92,26 +100,61 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     final controller = ref.read(cameraProvider.notifier).controller;
 
     return Scaffold(
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(child: _buildCameraLayer(cameraState, controller)),
-            if (cameraState.canShowPreview && controller != null)
-              Positioned.fill(
-                child: CameraVisionOverlay(state: visionOverlayState),
+      drawer: const AppDrawer(),
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: AppColors.screenBase,
+          gradient: AppColors.appBackgroundGradient,
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Stack(
+            children: [
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: AppSpacing.figmaInputPanelHeight,
+                child: _buildCameraLayer(cameraState, controller),
               ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: _QuestionInputPanel(
-                controller: _questionController,
-                speechState: speechInputState,
-                analysisState: analysisState,
-                onToggleListening: () =>
-                    ref.read(speechInputProvider.notifier).toggleListening(),
-                onSubmit: _submitQuestion,
+              if (cameraState.canShowPreview && controller != null)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: AppSpacing.figmaInputPanelHeight,
+                  child: CameraVisionOverlay(state: visionOverlayState),
+                ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Builder(
+                  builder: (context) {
+                    return AppTopBar(
+                      onMenuPressed: () => Scaffold.of(context).openDrawer(),
+                      onSettingsPressed: () => context.go(RoutePaths.settings),
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+              if (analysisState.isLoading)
+                const Positioned.fill(child: AnalysisLoadingView()),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: BottomInputBar(
+                  controller: _questionController,
+                  speechState: speechInputState,
+                  analysisState: analysisState,
+                  selectedMode: _selectedInputMode,
+                  onModeSelected: _handleInputModeSelected,
+                  onToggleListening: () =>
+                      ref.read(speechInputProvider.notifier).toggleListening(),
+                  onSubmit: _submitQuestion,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -126,6 +169,33 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     }
 
     ref.read(speechInputProvider.notifier).updateQuestionText(text);
+  }
+
+  void _handleInputModeSelected(InputMode mode) {
+    if (_selectedInputMode == mode) {
+      if (mode == InputMode.voice) {
+        ref.read(speechInputProvider.notifier).toggleListening();
+      }
+      return;
+    }
+
+    setState(() {
+      _selectedInputMode = mode;
+    });
+
+    final speechNotifier = ref.read(speechInputProvider.notifier);
+    final speechState = ref.read(speechInputProvider);
+
+    if (mode == InputMode.voice) {
+      if (!speechState.isListening) {
+        speechNotifier.toggleListening();
+      }
+      return;
+    }
+
+    if (speechState.isListening) {
+      speechNotifier.toggleListening();
+    }
   }
 
   Future<void> _submitQuestion() async {
@@ -164,203 +234,74 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     CameraController? controller,
   ) {
     if (cameraState.isInitializing) {
-      return const Center(child: CircularProgressIndicator());
+      return const _CameraStatusView(message: '카메라를 준비하고 있습니다.');
     }
 
     if (cameraState.errorMessage != null) {
-      return Center(
+      return _CameraStatusView(message: cameraState.errorMessage!);
+    }
+
+    if (cameraState.canShowPreview && controller != null) {
+      return _CameraPreviewFill(controller: controller);
+    }
+
+    return const _CameraStatusView(message: '카메라를 준비하고 있습니다.');
+  }
+}
+
+class _CameraPreviewFill extends StatelessWidget {
+  const _CameraPreviewFill({required this.controller});
+
+  final CameraController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final previewSize = controller.value.previewSize;
+
+    if (previewSize == null) {
+      return const ColoredBox(color: Colors.black);
+    }
+
+    return ColoredBox(
+      color: Colors.black,
+      child: ClipRect(
+        child: SizedBox.expand(
+          child: FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: previewSize.height,
+              height: previewSize.width,
+              child: CameraPreview(controller),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CameraStatusView extends StatelessWidget {
+  const _CameraStatusView({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: AppSpacing.screen,
         child: Text(
-          cameraState.errorMessage!,
+          message,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
           style: const TextStyle(
             color: AppColors.textPrimary,
             fontSize: 18,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
           ),
         ),
-      );
-    }
-
-    if (cameraState.canShowPreview && controller != null) {
-      return ColoredBox(
-        color: Colors.black,
-        child: Center(child: CameraPreview(controller)),
-      );
-    }
-
-    return const Center(
-      child: Text(
-        '카메라를 준비하고 있습니다.',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
       ),
     );
-  }
-}
-
-class _QuestionInputPanel extends StatelessWidget {
-  const _QuestionInputPanel({
-    required this.controller,
-    required this.speechState,
-    required this.analysisState,
-    required this.onToggleListening,
-    required this.onSubmit,
-  });
-
-  final TextEditingController controller;
-  final SpeechInputState speechState;
-  final AnalysisState analysisState;
-  final VoidCallback onToggleListening;
-  final VoidCallback onSubmit;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: AppColors.cardWhite,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x1F1B1D2A),
-            blurRadius: 18,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('이거 살까 말까?', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 10),
-            TextField(
-              controller: controller,
-              minLines: 1,
-              maxLines: 3,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => onSubmit(),
-              decoration: InputDecoration(
-                hintText: '질문을 말하거나 직접 입력하세요.',
-                suffixIcon: SizedBox(
-                  width: 96,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      IconButton(
-                        tooltip: speechState.isListening
-                            ? '음성 듣기 중지'
-                            : '음성 듣기 시작',
-                        onPressed: speechState.isInitializing
-                            ? null
-                            : onToggleListening,
-                        icon: Icon(
-                          speechState.isListening
-                              ? Icons.stop_circle
-                              : Icons.mic,
-                          color: speechState.isListening
-                              ? AppColors.pass
-                              : AppColors.blue,
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: '질문 보내기',
-                        onPressed: analysisState.isLoading ? null : onSubmit,
-                        icon: analysisState.isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(
-                                Icons.send_rounded,
-                                color: AppColors.primary,
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            _QuestionStatusText(
-              speechState: speechState,
-              analysisState: analysisState,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QuestionStatusText extends StatelessWidget {
-  const _QuestionStatusText({
-    required this.speechState,
-    required this.analysisState,
-  });
-
-  final SpeechInputState speechState;
-  final AnalysisState analysisState;
-
-  @override
-  Widget build(BuildContext context) {
-    final message = _statusMessage;
-    final color =
-        speechState.errorMessage != null ||
-            analysisState.status == AnalysisStatus.failure
-        ? AppColors.pass
-        : AppColors.textSecondary;
-
-    return Text(
-      message,
-      style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w500),
-    );
-  }
-
-  String get _statusMessage {
-    if (analysisState.status == AnalysisStatus.loading) {
-      return '이미지를 분석하고 있습니다.';
-    }
-
-    if (analysisState.status == AnalysisStatus.failure &&
-        analysisState.errorMessage != null) {
-      return analysisState.errorMessage!;
-    }
-
-    if (analysisState.status == AnalysisStatus.success) {
-      return '분석 결과를 준비했습니다.';
-    }
-
-    if (speechState.errorMessage != null) {
-      return speechState.errorMessage!;
-    }
-
-    if (speechState.isInitializing) {
-      return '음성 입력을 준비하고 있습니다.';
-    }
-
-    if (!speechState.isAvailable) {
-      return '음성 입력을 사용할 수 없으면 텍스트로 입력할 수 있습니다.';
-    }
-
-    if (speechState.isListening) {
-      return '듣고 있습니다. 질문을 말해주세요.';
-    }
-
-    if (speechState.lastRecognizedWords.isNotEmpty &&
-        speechState.isFinalResult) {
-      return '음성 인식 결과가 질문에 반영되었습니다.';
-    }
-
-    return '마이크 버튼으로 말하거나 텍스트로 입력할 수 있습니다.';
   }
 }
