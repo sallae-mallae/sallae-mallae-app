@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../app/assets/app_assets.dart';
-import '../../app/router/route_paths.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_radius.dart';
 import '../../app/theme/app_spacing.dart';
 
+enum AppDrawerSection { camera, history }
+
 class AppDrawer extends StatelessWidget {
-  const AppDrawer({required this.width, this.onItemSelected, super.key});
+  const AppDrawer({
+    required this.width,
+    this.selectedSection = AppDrawerSection.camera,
+    this.onSectionSelected,
+    this.onOpenSettings,
+    super.key,
+  });
 
   final double width;
-  final VoidCallback? onItemSelected;
+  final AppDrawerSection selectedSection;
+  final ValueChanged<AppDrawerSection>? onSectionSelected;
+  final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -23,41 +31,45 @@ class AppDrawer extends StatelessWidget {
           borderRadius: const BorderRadius.horizontal(
             right: Radius.circular(36),
           ),
-          child: DecoratedBox(
-            decoration: const BoxDecoration(color: AppColors.cardWhite),
+          child: Material(
+            color: AppColors.cardWhite,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(22, 24, 18, 22),
+              padding: const EdgeInsets.fromLTRB(22, 0, 18, 22),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        AppAssets.logoAll,
-                        width: 56,
-                        fit: BoxFit.contain,
+                  SizedBox(
+                    height: AppSpacing.topBarHeight + 10,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            AppAssets.logoAll,
+                            width: 52,
+                            fit: BoxFit.contain,
+                          ),
+                          const Spacer(),
+                          _ProfileCircleButton(),
+                        ],
                       ),
-                      const Spacer(),
-                      _ProfileCircleButton(),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
                   _DrawerTile(
                     icon: Icons.camera_alt_outlined,
                     label: '카메라',
-                    onTap: () {
-                      onItemSelected?.call();
-                      context.go(RoutePaths.home);
-                    },
+                    selected: selectedSection == AppDrawerSection.camera,
+                    onTap: () =>
+                        onSectionSelected?.call(AppDrawerSection.camera),
                   ),
                   _DrawerTile(
                     icon: Icons.history_rounded,
                     label: '최근 판단',
-                    onTap: () {
-                      onItemSelected?.call();
-                      context.go(RoutePaths.history);
-                    },
+                    selected: selectedSection == AppDrawerSection.history,
+                    onTap: () =>
+                        onSectionSelected?.call(AppDrawerSection.history),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Text(
@@ -78,10 +90,7 @@ class AppDrawer extends StatelessWidget {
                     child: Tooltip(
                       message: '설정',
                       child: InkWell(
-                        onTap: () {
-                          onItemSelected?.call();
-                          context.go(RoutePaths.settings);
-                        },
+                        onTap: onOpenSettings,
                         customBorder: const CircleBorder(),
                         child: Padding(
                           padding: const EdgeInsets.all(10),
@@ -109,11 +118,13 @@ class _DrawerTile extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.selected = false,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -121,6 +132,9 @@ class _DrawerTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: ListTile(
         onTap: onTap,
+        selected: selected,
+        selectedTileColor: AppColors.primary.withValues(alpha: 0.10),
+        selectedColor: AppColors.primary,
         minLeadingWidth: 24,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),

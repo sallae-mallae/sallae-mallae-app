@@ -15,21 +15,21 @@ class AppTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: AppSpacing.topBarHeight + 10,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: 16,
-            top: 8,
-            child: IconCircleButton(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            IconCircleButton(
               icon: Icons.menu_rounded,
               tooltip: '메뉴 열기',
               onPressed: onMenuPressed,
               shape: IconCircleButtonShape.circle,
             ),
-          ),
-          const Positioned(right: 16, top: 8, child: _GlassLogo()),
-        ],
+            const Spacer(),
+            const _GlassLogo(),
+          ],
+        ),
       ),
     );
   }

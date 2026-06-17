@@ -242,8 +242,8 @@ class _SendAssetButton extends StatelessWidget {
           opacity: onPressed == null ? 0.45 : 1,
           child: Image.asset(
             AppAssets.send,
-            width: 54,
-            height: 54,
+            width: 46,
+            height: 46,
             fit: BoxFit.contain,
           ),
         ),

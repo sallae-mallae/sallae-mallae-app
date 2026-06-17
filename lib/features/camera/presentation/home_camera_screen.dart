@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/router/route_paths.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../features/analysis/presentation/widgets/analysis_loading_view.dart';
@@ -34,6 +36,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   late final TextEditingController _questionController;
   InputMode _selectedInputMode = InputMode.text;
   bool _isDrawerOpen = false;
+  AppDrawerSection _section = AppDrawerSection.camera;
 
   @override
   void initState() {
@@ -110,7 +113,9 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
               alignment: Alignment.centerLeft,
               child: AppDrawer(
                 width: drawerWidth,
-                onItemSelected: _closeDrawer,
+                selectedSection: _section,
+                onSectionSelected: _selectSection,
+                onOpenSettings: _openSettings,
               ),
             ),
           ),
@@ -141,21 +146,34 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
               borderRadius: BorderRadius.horizontal(
                 left: Radius.circular(_isDrawerOpen ? 32 : 0),
               ),
-              child: _HomeCameraBody(
-                cameraState: cameraState,
-                controller: controller,
-                visionOverlayState: visionOverlayState,
-                analysisState: analysisState,
-                speechInputState: speechInputState,
-                questionController: _questionController,
-                selectedInputMode: _selectedInputMode,
-                onMenuPressed: _toggleDrawer,
-                onModeSelected: _handleInputModeSelected,
-                onToggleListening: () =>
-                    ref.read(speechInputProvider.notifier).toggleListening(),
-                onSubmit: _submitQuestion,
-                onTapWhenDrawerOpen: _isDrawerOpen ? _closeDrawer : null,
-                buildCameraLayer: _buildCameraLayer,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 260),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                child: _section == AppDrawerSection.history
+                    ? _HistorySectionView(
+                        key: const ValueKey(AppDrawerSection.history),
+                        onMenuPressed: _toggleDrawer,
+                        onTapArea: _handleCameraAreaTap,
+                      )
+                    : _HomeCameraBody(
+                        key: const ValueKey(AppDrawerSection.camera),
+                        cameraState: cameraState,
+                        controller: controller,
+                        visionOverlayState: visionOverlayState,
+                        analysisState: analysisState,
+                        speechInputState: speechInputState,
+                        questionController: _questionController,
+                        selectedInputMode: _selectedInputMode,
+                        onMenuPressed: _toggleDrawer,
+                        onModeSelected: _handleInputModeSelected,
+                        onToggleListening: () => ref
+                            .read(speechInputProvider.notifier)
+                            .toggleListening(),
+                        onSubmit: _submitQuestion,
+                        onTapCameraArea: _handleCameraAreaTap,
+                        buildCameraLayer: _buildCameraLayer,
+                      ),
               ),
             ),
           ),
@@ -183,6 +201,25 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     setState(() {
       _isDrawerOpen = false;
     });
+  }
+
+  void _handleCameraAreaTap() {
+    FocusScope.of(context).unfocus();
+    _closeDrawer();
+  }
+
+  void _selectSection(AppDrawerSection section) {
+    if (_section != section) {
+      setState(() {
+        _section = section;
+      });
+    }
+    _closeDrawer();
+  }
+
+  void _openSettings() {
+    _closeDrawer();
+    context.go(RoutePaths.settings);
   }
 
   Widget _buildCameraLayer(
@@ -274,6 +311,86 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   }
 }
 
+class _HistorySectionView extends StatelessWidget {
+  const _HistorySectionView({
+    required this.onMenuPressed,
+    required this.onTapArea,
+    super.key,
+  });
+
+  final VoidCallback onMenuPressed;
+  final VoidCallback onTapArea;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTapArea,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: AppColors.screenBase,
+          gradient: AppColors.appBackgroundGradient,
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Padding(
+                  padding: EdgeInsets.only(top: AppSpacing.topBarHeight + 10),
+                  child: Center(
+                    child: Padding(
+                      padding: AppSpacing.screen,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.history_rounded,
+                            size: 56,
+                            color: AppColors.primary.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          const Text(
+                            '최근 판단',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          const Text(
+                            '분석 기록은 이후 단계에서 표시됩니다.',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: AppTopBar(onMenuPressed: onMenuPressed),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _HomeCameraBody extends StatelessWidget {
   const _HomeCameraBody({
     required this.cameraState,
@@ -288,7 +405,8 @@ class _HomeCameraBody extends StatelessWidget {
     required this.onToggleListening,
     required this.onSubmit,
     required this.buildCameraLayer,
-    this.onTapWhenDrawerOpen,
+    required this.onTapCameraArea,
+    super.key,
   });
 
   final CameraState cameraState;
@@ -302,7 +420,7 @@ class _HomeCameraBody extends StatelessWidget {
   final ValueChanged<InputMode> onModeSelected;
   final VoidCallback onToggleListening;
   final VoidCallback onSubmit;
-  final VoidCallback? onTapWhenDrawerOpen;
+  final VoidCallback onTapCameraArea;
   final Widget Function(CameraState, CameraController?) buildCameraLayer;
 
   @override
