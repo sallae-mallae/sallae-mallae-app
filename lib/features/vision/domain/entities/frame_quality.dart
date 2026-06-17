@@ -22,12 +22,14 @@ class FrameQuality {
   final ShakeStatus shakeStatus;
   final bool isReadable;
 
-  bool get isBrightEnough => brightnessScore >= 0.45;
+  bool get isBrightEnough => brightnessScore >= 0.18;
 
-  bool get isSharpEnough => blurScore >= 0.55 && focusScore >= 0.55;
+  bool get isSharpEnough => blurScore >= 0.15 && focusScore >= 0.15;
 
   bool get isStable =>
-      shakeStatus == ShakeStatus.stable || shakeStatus == ShakeStatus.slight;
+      shakeStatus == ShakeStatus.stable ||
+      shakeStatus == ShakeStatus.slight ||
+      shakeStatus == ShakeStatus.unknown;
 
   bool get canAnalyzeText => isReadable && isBrightEnough && isSharpEnough;
 

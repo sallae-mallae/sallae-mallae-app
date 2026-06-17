@@ -80,10 +80,10 @@ class BasicOpenCvQualityService implements OpenCvQualityService {
     required int width,
     required int height,
   }) {
-    final hasEnoughPixelsForTargetCrop = width >= 768 && height >= 768;
+    final hasEnoughPixelsForTargetCrop = width >= 480 && height >= 480;
 
     return hasEnoughPixelsForTargetCrop &&
-        brightnessScore >= 0.45 &&
-        blurScore >= 0.45;
+        brightnessScore >= 0.18 &&
+        blurScore >= 0.15;
   }
 }
