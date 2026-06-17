@@ -28,7 +28,7 @@ class AppTopBar extends StatelessWidget {
               shape: IconCircleButtonShape.circle,
             ),
           ),
-          const Positioned(right: 18, top: 4, child: _GlassLogo()),
+          const Positioned(right: 16, top: 8, child: _GlassLogo()),
         ],
       ),
     );
@@ -41,21 +41,20 @@ class _GlassLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.48),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.52)),
+            borderRadius: BorderRadius.circular(20),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Image.asset(
               AppAssets.logoWord,
-              width: 118,
-              height: 32,
+              width: 96,
+              height: 26,
               fit: BoxFit.contain,
             ),
           ),

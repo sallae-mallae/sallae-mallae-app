@@ -236,9 +236,8 @@ class _SendAssetButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: tooltip,
-      child: InkWell(
+      child: GestureDetector(
         onTap: onPressed,
-        customBorder: const CircleBorder(),
         child: Opacity(
           opacity: onPressed == null ? 0.45 : 1,
           child: Image.asset(

@@ -122,6 +122,21 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
               0,
               0,
             ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.horizontal(
+                left: Radius.circular(_isDrawerOpen ? 32 : 0),
+              ),
+              boxShadow: _isDrawerOpen
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.28),
+                        blurRadius: 32,
+                        spreadRadius: 2,
+                        offset: const Offset(-8, 0),
+                      ),
+                    ]
+                  : null,
+            ),
             child: ClipRRect(
               borderRadius: BorderRadius.horizontal(
                 left: Radius.circular(_isDrawerOpen ? 32 : 0),

@@ -30,12 +30,19 @@ class AppDrawer extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Image.asset(
-                    AppAssets.logoAll,
-                    width: 82,
-                    fit: BoxFit.contain,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        AppAssets.logoAll,
+                        width: 56,
+                        fit: BoxFit.contain,
+                      ),
+                      const Spacer(),
+                      _ProfileCircleButton(),
+                    ],
                   ),
-                  const SizedBox(height: 42),
+                  const SizedBox(height: 32),
                   _DrawerTile(
                     icon: Icons.camera_alt_outlined,
                     label: '카메라',
@@ -150,6 +157,32 @@ class _RecentText extends StatelessWidget {
         fontSize: 15,
         height: 1.35,
         fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+}
+
+class _ProfileCircleButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: '프로필',
+      child: InkWell(
+        onTap: () {},
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.primary.withValues(alpha: 0.12),
+          ),
+          child: const Icon(
+            Icons.person_rounded,
+            size: 22,
+            color: AppColors.primary,
+          ),
+        ),
       ),
     );
   }
