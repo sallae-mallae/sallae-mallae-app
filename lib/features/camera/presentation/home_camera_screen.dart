@@ -426,7 +426,7 @@ class _HomeCameraBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTapWhenDrawerOpen,
+      onTap: onTapCameraArea,
       child: DecoratedBox(
         decoration: const BoxDecoration(
           color: AppColors.screenBase,
