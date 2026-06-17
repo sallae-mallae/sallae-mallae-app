@@ -36,7 +36,7 @@ class VisionOverlayState {
     final quality = context.frameQuality;
 
     if (!context.hasFrameSize) {
-      return '상품을 화면 중앙에 맞춰주세요.';
+      return '상품을 화면 중앙에\n맞춰주세요.';
     }
 
     if (context.isReadyForAiRequest) {
@@ -44,19 +44,19 @@ class VisionOverlayState {
     }
 
     if (!quality.isBrightEnough) {
-      return '조금 더 밝은 곳에서 촬영해주세요.';
+      return '조금 더 밝은 곳에서\n촬영해주세요.';
     }
 
     if (!quality.isSharpEnough) {
-      return '초점이 맞도록 잠시 멈춰주세요.';
+      return '초점이 맞도록\n잠시 멈춰주세요.';
     }
 
     if (!quality.isStable) {
-      return '흔들림을 줄이고 상품을 중앙에 맞춰주세요.';
+      return '흔들림을 줄이고\n상품을 중앙에 맞춰주세요.';
     }
 
     if (!context.hasDetectedProduct && !context.hasOcrCandidate) {
-      return '상품을 화면 중앙에 맞춰주세요.';
+      return '상품을 화면 중앙에\n맞춰주세요.';
     }
 
     if (!context.hasOcrCandidate && context.hasDetectedProduct) {

@@ -50,95 +50,98 @@ class _LoginBottomSheetState extends State<_LoginBottomSheet> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: AppColors.cardWhite,
-        borderRadius: AppRadius.sheet,
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(24, 12, 24, 20 + bottomInset),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Center(
-                child: Image.asset(
-                  AppAssets.logoAll,
-                  width: 60,
-                  fit: BoxFit.contain,
-                ),
-              ),
-              const SizedBox(height: 14),
-              const Center(
-                child: Text(
-                  '로그인하고 시작하기',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 22),
-              AuthTextField(
-                controller: _email,
-                label: '이메일',
-                hintText: 'example@sallae.com',
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 14),
-              AuthTextField(
-                controller: _password,
-                label: '비밀번호',
-                hintText: '비밀번호를 입력해 주세요.',
-                obscureText: true,
-              ),
-              const SizedBox(height: 22),
-              PrimaryActionButton(
-                label: '로그인',
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    '계정이 없으신가요?',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: AppColors.cardWhite,
+          borderRadius: AppRadius.sheet,
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(24, 12, 24, 20 + bottomInset),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
                     ),
                   ),
-                  TextButton(
-                    onPressed: widget.onSignup,
-                    child: const Text(
-                      '회원가입',
+                ),
+                const SizedBox(height: 20),
+                Center(
+                  child: Image.asset(
+                    AppAssets.logoAll,
+                    width: 60,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Center(
+                  child: Text(
+                    '로그인하고 시작하기',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 22),
+                AuthTextField(
+                  controller: _email,
+                  label: '이메일',
+                  hintText: 'example@sallae.com',
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 14),
+                AuthTextField(
+                  controller: _password,
+                  label: '비밀번호',
+                  hintText: '비밀번호를 입력해 주세요.',
+                  obscureText: true,
+                ),
+                const SizedBox(height: 22),
+                PrimaryActionButton(
+                  label: '로그인',
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      '계정이 없으신가요?',
                       style: TextStyle(
-                        color: AppColors.primary,
+                        color: AppColors.textSecondary,
                         fontSize: 14,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    TextButton(
+                      onPressed: widget.onSignup,
+                      child: const Text(
+                        '회원가입',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
