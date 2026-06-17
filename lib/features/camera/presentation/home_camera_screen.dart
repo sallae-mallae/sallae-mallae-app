@@ -8,7 +8,9 @@ import 'package:go_router/go_router.dart';
 import '../../../app/router/route_paths.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../features/analysis/domain/entities/analysis_result.dart';
 import '../../../features/analysis/presentation/widgets/analysis_loading_view.dart';
+import '../../../features/analysis/presentation/widgets/analysis_result_view.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../shared/widgets/bottom_input_bar.dart';
@@ -105,6 +107,18 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
       }
     });
 
+    ref.listen<AnalysisState>(analysisProvider, (previous, next) {
+      if (next.status == previous?.status) {
+        return;
+      }
+
+      if (next.status == AnalysisStatus.success && next.result != null) {
+        _speakResult(next.result!);
+      } else if (next.status == AnalysisStatus.failure) {
+        _showFailure(next.errorMessage);
+      }
+    });
+
     final cameraState = ref.watch(cameraProvider);
     final analysisState = ref.watch(analysisProvider);
     final visionOverlayState = VisionOverlayState.fromContext(
@@ -185,6 +199,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
                             .toggleListening(),
                         onSubmit: _submitQuestion,
                         onTapCameraArea: _handleCameraAreaTap,
+                        onCloseResult: _closeResult,
                         buildCameraLayer: _buildCameraLayer,
                       ),
               ),
@@ -326,6 +341,35 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
       question: question,
       visionContext: ref.read(visionProvider),
     );
+  }
+
+  /// Reads the verdict and recommendation aloud once an analysis succeeds.
+  void _speakResult(AnalysisResult result) {
+    final segments = [
+      result.verdictLabel.trim(),
+      result.recommendation.trim(),
+    ].where((segment) => segment.isNotEmpty).toList();
+
+    if (segments.isEmpty) {
+      return;
+    }
+
+    unawaited(_voiceNotifier.speakAiResponse(segments.join('. ')));
+  }
+
+  void _showFailure(String? message) {
+    if (message == null || message.isEmpty || !mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _closeResult() {
+    unawaited(_voiceNotifier.stop());
+    ref.read(analysisProvider.notifier).reset();
   }
 }
 
@@ -493,6 +537,7 @@ class _HomeCameraBody extends StatelessWidget {
     required this.onSubmit,
     required this.buildCameraLayer,
     required this.onTapCameraArea,
+    required this.onCloseResult,
     super.key,
   });
 
@@ -508,6 +553,7 @@ class _HomeCameraBody extends StatelessWidget {
   final VoidCallback onToggleListening;
   final VoidCallback onSubmit;
   final VoidCallback onTapCameraArea;
+  final VoidCallback onCloseResult;
   final Widget Function(CameraState, CameraController?) buildCameraLayer;
 
   @override
@@ -538,6 +584,14 @@ class _HomeCameraBody extends StatelessWidget {
                   bottom: AppSpacing.figmaInputPanelHeight,
                   child: CameraVisionOverlay(state: visionOverlayState),
                 ),
+              if (analysisState.status == AnalysisStatus.success &&
+                  analysisState.result != null)
+                Positioned.fill(
+                  child: AnalysisResultView(
+                    result: analysisState.result!,
+                    onClose: onCloseResult,
+                  ),
+                ),
               Positioned(
                 top: 0,
                 left: 0,
@@ -547,23 +601,24 @@ class _HomeCameraBody extends StatelessWidget {
               Positioned.fill(
                 child: _AnalysisLoadingGate(isLoading: analysisState.isLoading),
               ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.viewInsetsOf(context).bottom,
-                  ),
-                  child: BottomInputBar(
-                    controller: questionController,
-                    speechState: speechInputState,
-                    analysisState: analysisState,
-                    selectedMode: selectedInputMode,
-                    onModeSelected: onModeSelected,
-                    onToggleListening: onToggleListening,
-                    onSubmit: onSubmit,
+              if (analysisState.status != AnalysisStatus.success)
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.viewInsetsOf(context).bottom,
+                    ),
+                    child: BottomInputBar(
+                      controller: questionController,
+                      speechState: speechInputState,
+                      analysisState: analysisState,
+                      selectedMode: selectedInputMode,
+                      onModeSelected: onModeSelected,
+                      onToggleListening: onToggleListening,
+                      onSubmit: onSubmit,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
