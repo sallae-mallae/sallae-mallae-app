@@ -92,9 +92,12 @@ class BottomInputBar extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                _InputStatusText(
-                  speechState: speechState,
-                  analysisState: analysisState,
+                Padding(
+                  padding: const EdgeInsets.only(left: 6),
+                  child: _InputStatusText(
+                    speechState: speechState,
+                    analysisState: analysisState,
+                  ),
                 ),
               ],
             ),

@@ -4,4 +4,5 @@ abstract final class RoutePaths {
   static const home = '/home';
   static const history = '/history';
   static const settings = '/settings';
+  static const signup = '/signup';
 }

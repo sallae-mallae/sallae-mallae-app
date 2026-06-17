@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:sallae_mallae_app/features/camera/presentation/home_camera_screen.dart';
+import 'package:sallae_mallae_app/features/auth/presentation/signup_screen.dart';
 import 'package:sallae_mallae_app/features/history/presentation/history_screen.dart';
 import 'package:sallae_mallae_app/features/permission/presentation/permission_guide_screen.dart';
 import 'package:sallae_mallae_app/features/settings/presentation/settings_screen.dart';
@@ -29,6 +30,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: RoutePaths.settings,
       builder: (context, state) => const SettingsScreen(),
+    ),
+    GoRoute(
+      path: RoutePaths.signup,
+      builder: (context, state) => const SignupScreen(),
     ),
   ],
 );

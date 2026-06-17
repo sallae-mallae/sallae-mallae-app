@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../app/assets/app_assets.dart';
+import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
 import 'icon_circle_button.dart';
 
@@ -46,7 +47,7 @@ class _GlassLogo extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.48),
+            color: AppColors.cardWhite.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Padding(

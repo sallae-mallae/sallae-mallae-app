@@ -56,11 +56,8 @@ class IconCircleButton extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: AppColors.cardWhite.withValues(alpha: 0.72),
+              color: AppColors.cardWhite.withValues(alpha: 0.6),
               borderRadius: borderRadius,
-              border: Border.all(
-                color: AppColors.cardWhite.withValues(alpha: 0.62),
-              ),
             ),
             child: button,
           ),

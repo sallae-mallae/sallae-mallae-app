@@ -33,7 +33,7 @@ class CameraVisionOverlay extends StatelessWidget {
               height: AppSpacing.topBarHeight + 2,
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 150),
+                  constraints: const BoxConstraints(maxWidth: 164),
                   child: _QualityGuide(
                     text: state.guideText!,
                     canSuggestCapture: state.canSuggestCapture,
@@ -63,7 +63,7 @@ class _QualityGuide extends StatelessWidget {
       alignment: Alignment.center,
       child: CameraOverlayElement(
         backgroundColor: backgroundColor,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         child: Text(
           text,
           maxLines: 2,
@@ -71,7 +71,8 @@ class _QualityGuide extends StatelessWidget {
           textAlign: TextAlign.center,
           style: const TextStyle(
             color: AppColors.cardWhite,
-            fontSize: 13,
+            fontSize: 12,
+            height: 1.25,
             fontWeight: FontWeight.w700,
           ),
         ),
