@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../../app/assets/app_assets.dart';
@@ -34,108 +36,69 @@ class BottomInputBar extends StatelessWidget {
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
     final hintText = _hintText;
 
-    return DecoratedBox(
-      decoration: const BoxDecoration(color: AppColors.cardWhite),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 22, 16, 16 + bottomPadding),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 40,
-              child: SegmentedInputMode(
-                selectedMode: selectedMode,
-                onModeSelected: onModeSelected,
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppColors.cardWhite.withValues(alpha: 0.78),
+            border: Border(
+              top: BorderSide(
+                color: AppColors.cardWhite.withValues(alpha: 0.74),
               ),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
+          ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(16, 22, 16, 16 + bottomPadding),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 40,
-                    child: TextField(
-                      controller: controller,
-                      minLines: 1,
-                      maxLines: 1,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => onSubmit(),
-                      enabled: !analysisState.isLoading,
-                      textAlignVertical: TextAlignVertical.center,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: selectedMode == InputMode.voice
-                            ? hintText
-                            : '질문을 입력해 주세요.',
-                        prefixIcon: selectedMode == InputMode.voice
-                            ? Icon(
-                                speechState.isListening
-                                    ? Icons.graphic_eq_rounded
-                                    : Icons.mic_rounded,
-                                color: speechState.isListening
-                                    ? AppColors.primary
-                                    : AppColors.textSecondary,
-                                size: 18,
-                              )
-                            : null,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.input),
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.input),
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.input),
-                          borderSide: const BorderSide(
-                            color: AppColors.primary,
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
-                    ),
+                SizedBox(
+                  height: 40,
+                  child: SegmentedInputMode(
+                    selectedMode: selectedMode,
+                    onModeSelected: onModeSelected,
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                if (selectedMode == InputMode.voice &&
-                    controller.text.trim().isEmpty)
-                  IconCircleButton(
-                    icon: speechState.isListening
-                        ? Icons.stop_rounded
-                        : Icons.mic_rounded,
-                    tooltip: speechState.isListening ? '음성 듣기 중지' : '음성 듣기 시작',
-                    onPressed: analysisState.isLoading
-                        ? null
-                        : onToggleListening,
-                    isPrimary: true,
-                  )
-                else
-                  IconCircleButton(
-                    icon: analysisState.isLoading
-                        ? Icons.hourglass_top_rounded
-                        : null,
-                    assetPath: analysisState.isLoading ? null : AppAssets.send,
-                    tooltip: '질문 보내기',
-                    onPressed: analysisState.isLoading ? null : onSubmit,
-                    isPrimary: true,
+                const SizedBox(height: AppSpacing.sm),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) {
+                    final offset = Tween<Offset>(
+                      begin: selectedMode == InputMode.voice
+                          ? const Offset(0.08, 0)
+                          : const Offset(-0.08, 0),
+                      end: Offset.zero,
+                    ).animate(animation);
+
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(position: offset, child: child),
+                    );
+                  },
+                  child: _QuestionInputRow(
+                    key: ValueKey(selectedMode),
+                    controller: controller,
+                    hintText: hintText,
+                    speechState: speechState,
+                    analysisState: analysisState,
+                    selectedMode: selectedMode,
+                    onToggleListening: onToggleListening,
+                    onSubmit: onSubmit,
                   ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                _InputStatusText(
+                  speechState: speechState,
+                  analysisState: analysisState,
+                ),
               ],
             ),
-            const SizedBox(height: AppSpacing.xs),
-            _InputStatusText(
-              speechState: speechState,
-              analysisState: analysisState,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -163,6 +126,106 @@ class BottomInputBar extends StatelessWidget {
     }
 
     return '질문을 말해주세요.';
+  }
+}
+
+class _QuestionInputRow extends StatelessWidget {
+  const _QuestionInputRow({
+    required this.controller,
+    required this.hintText,
+    required this.speechState,
+    required this.analysisState,
+    required this.selectedMode,
+    required this.onToggleListening,
+    required this.onSubmit,
+    super.key,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final SpeechInputState speechState;
+  final AnalysisState analysisState;
+  final InputMode selectedMode;
+  final VoidCallback onToggleListening;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: 40,
+            child: TextField(
+              controller: controller,
+              minLines: 1,
+              maxLines: 1,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => onSubmit(),
+              enabled: !analysisState.isLoading,
+              textAlignVertical: TextAlignVertical.center,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+              decoration: InputDecoration(
+                hintText: selectedMode == InputMode.voice
+                    ? hintText
+                    : '질문을 입력해 주세요.',
+                prefixIcon: selectedMode == InputMode.voice
+                    ? Icon(
+                        speechState.isListening
+                            ? Icons.graphic_eq_rounded
+                            : Icons.mic_rounded,
+                        color: speechState.isListening
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                        size: 18,
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 18),
+                filled: true,
+                fillColor: AppColors.cardWhite.withValues(alpha: 0.58),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.input),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.input),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.input),
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 1.5,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        if (selectedMode == InputMode.voice && controller.text.trim().isEmpty)
+          IconCircleButton(
+            icon: speechState.isListening
+                ? Icons.stop_rounded
+                : Icons.mic_rounded,
+            tooltip: speechState.isListening ? '음성 듣기 중지' : '음성 듣기 시작',
+            onPressed: analysisState.isLoading ? null : onToggleListening,
+            isPrimary: true,
+          )
+        else
+          IconCircleButton(
+            icon: analysisState.isLoading ? Icons.hourglass_top_rounded : null,
+            assetPath: analysisState.isLoading ? null : AppAssets.send,
+            tooltip: '질문 보내기',
+            onPressed: analysisState.isLoading ? null : onSubmit,
+            isPrimary: true,
+          ),
+      ],
+    );
   }
 }
 

@@ -22,26 +22,48 @@ class SegmentedInputMode extends StatelessWidget {
       label: '입력 방식 선택',
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppColors.lightBlueSurface,
+          color: AppColors.lightBlueSurface.withValues(alpha: 0.86),
           borderRadius: AppRadius.pillShape,
         ),
         child: Padding(
           padding: const EdgeInsets.all(3),
-          child: Row(
+          child: Stack(
             children: [
-              Expanded(
-                child: _InputModeSegment(
-                  label: '텍스트',
-                  isSelected: selectedMode == InputMode.text,
-                  onTap: () => onModeSelected(InputMode.text),
+              AnimatedAlign(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                alignment: selectedMode == InputMode.text
+                    ? Alignment.centerLeft
+                    : Alignment.centerRight,
+                child: FractionallySizedBox(
+                  widthFactor: 0.5,
+                  heightFactor: 1,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      boxShadow: AppShadows.floating,
+                    ),
+                  ),
                 ),
               ),
-              Expanded(
-                child: _InputModeSegment(
-                  label: '음성',
-                  isSelected: selectedMode == InputMode.voice,
-                  onTap: () => onModeSelected(InputMode.voice),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _InputModeSegment(
+                      label: '텍스트',
+                      isSelected: selectedMode == InputMode.text,
+                      onTap: () => onModeSelected(InputMode.text),
+                    ),
+                  ),
+                  Expanded(
+                    child: _InputModeSegment(
+                      label: '음성',
+                      isSelected: selectedMode == InputMode.voice,
+                      onTap: () => onModeSelected(InputMode.voice),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -71,25 +93,20 @@ class _InputModeSegment extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
+        child: SizedBox(
           height: 34,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            gradient: isSelected ? AppColors.primaryGradient : null,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            boxShadow: isSelected ? AppShadows.floating : null,
-          ),
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: isSelected
-                  ? AppColors.textInverse
-                  : AppColors.textSecondary,
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
+          child: Center(
+            child: AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOutCubic,
+              style: TextStyle(
+                color: isSelected
+                    ? AppColors.textInverse
+                    : AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+              child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
             ),
           ),
         ),

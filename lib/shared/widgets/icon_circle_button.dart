@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
@@ -21,7 +23,7 @@ class IconCircleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final child = IconButton(
+    final button = IconButton(
       tooltip: tooltip,
       onPressed: onPressed,
       icon: assetPath == null
@@ -31,7 +33,7 @@ class IconCircleButton extends StatelessWidget {
       style: IconButton.styleFrom(
         minimumSize: const Size.square(40),
         fixedSize: const Size.square(40),
-        backgroundColor: isPrimary ? null : AppColors.cardWhite,
+        backgroundColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
@@ -39,7 +41,22 @@ class IconCircleButton extends StatelessWidget {
     );
 
     if (!isPrimary) {
-      return child;
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.cardWhite.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                color: AppColors.cardWhite.withValues(alpha: 0.62),
+              ),
+            ),
+            child: button,
+          ),
+        ),
+      );
     }
 
     return DecoratedBox(
@@ -54,7 +71,7 @@ class IconCircleButton extends StatelessWidget {
           ),
         ],
       ),
-      child: child,
+      child: button,
     );
   }
 }

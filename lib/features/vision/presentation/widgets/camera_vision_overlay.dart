@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/widgets/camera_overlay_element.dart';
 import '../../domain/entities/detected_product.dart';
 import '../models/vision_overlay_state.dart';
@@ -28,7 +29,7 @@ class CameraVisionOverlay extends StatelessWidget {
             Positioned(
               left: 16,
               right: 16,
-              top: 16,
+              top: AppSpacing.topBarHeight + 28,
               child: _QualityGuide(
                 text: state.guideText!,
                 canSuggestCapture: state.canSuggestCapture,

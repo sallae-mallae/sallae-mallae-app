@@ -3,9 +3,7 @@ import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../app/router/route_paths.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../features/analysis/presentation/widgets/analysis_loading_view.dart';
@@ -133,7 +131,6 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
                   builder: (context) {
                     return AppTopBar(
                       onMenuPressed: () => Scaffold.of(context).openDrawer(),
-                      onSettingsPressed: () => context.go(RoutePaths.settings),
                     );
                   },
                 ),

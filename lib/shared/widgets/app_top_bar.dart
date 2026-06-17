@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../app/assets/app_assets.dart';
-import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
 import 'icon_circle_button.dart';
 
 class AppTopBar extends StatelessWidget {
-  const AppTopBar({this.onMenuPressed, this.onSettingsPressed, super.key});
+  const AppTopBar({this.onMenuPressed, super.key});
 
   final VoidCallback? onMenuPressed;
-  final VoidCallback? onSettingsPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -31,12 +29,6 @@ class AppTopBar extends StatelessWidget {
               width: 143,
               height: 48,
               fit: BoxFit.contain,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            IconCircleButton(
-              assetPath: AppAssets.settings,
-              tooltip: '설정 열기',
-              onPressed: onSettingsPressed,
             ),
           ],
         ),
