@@ -217,13 +217,38 @@ class _QuestionInputRow extends StatelessWidget {
             isPrimary: true,
           )
         else
-          IconCircleButton(
-            assetPath: AppAssets.send,
+          _SendAssetButton(
             tooltip: '질문 보내기',
             onPressed: analysisState.isLoading ? null : onSubmit,
-            isPrimary: true,
           ),
       ],
+    );
+  }
+}
+
+class _SendAssetButton extends StatelessWidget {
+  const _SendAssetButton({required this.tooltip, required this.onPressed});
+
+  final String tooltip;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        customBorder: const CircleBorder(),
+        child: Opacity(
+          opacity: onPressed == null ? 0.45 : 1,
+          child: Image.asset(
+            AppAssets.send,
+            width: 54,
+            height: 54,
+            fit: BoxFit.contain,
+          ),
+        ),
+      ),
     );
   }
 }

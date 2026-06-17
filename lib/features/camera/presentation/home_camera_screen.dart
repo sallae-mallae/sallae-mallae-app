@@ -12,6 +12,7 @@ import '../../../shared/widgets/app_top_bar.dart';
 import '../../../shared/widgets/bottom_input_bar.dart';
 import '../../../shared/widgets/segmented_input_mode.dart';
 import '../../analysis/application/analysis_provider.dart';
+import '../../analysis/application/analysis_state.dart';
 import '../../speech_input/data/models/speech_input_state.dart';
 import '../../speech_input/domain/speech_input_provider.dart';
 import '../../vision/domain/vision_provider.dart';
@@ -32,6 +33,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     with WidgetsBindingObserver {
   late final TextEditingController _questionController;
   InputMode _selectedInputMode = InputMode.text;
+  bool _isDrawerOpen = false;
 
   @override
   void initState() {
@@ -97,65 +99,94 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     final speechInputState = ref.watch(speechInputProvider);
     final controller = ref.read(cameraProvider.notifier).controller;
 
+    final drawerWidth = _drawerWidth(context);
+
     return Scaffold(
-      drawer: const AppDrawer(),
-      drawerScrimColor: Colors.black.withValues(alpha: 0.62),
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: AppColors.screenBase,
-          gradient: AppColors.appBackgroundGradient,
-        ),
-        child: SafeArea(
-          bottom: false,
-          child: Stack(
-            children: [
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: AppSpacing.figmaInputPanelHeight,
-                child: _buildCameraLayer(cameraState, controller),
+      body: Stack(
+        children: [
+          DecoratedBox(
+            decoration: const BoxDecoration(color: AppColors.cardWhite),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: AppDrawer(
+                width: drawerWidth,
+                onItemSelected: _closeDrawer,
               ),
-              if (cameraState.canShowPreview && controller != null)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: AppSpacing.figmaInputPanelHeight,
-                  child: CameraVisionOverlay(state: visionOverlayState),
-                ),
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: Builder(
-                  builder: (context) {
-                    return AppTopBar(
-                      onMenuPressed: () => Scaffold.of(context).openDrawer(),
-                    );
-                  },
-                ),
-              ),
-              if (analysisState.isLoading)
-                const Positioned.fill(child: AnalysisLoadingView()),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: BottomInputBar(
-                  controller: _questionController,
-                  speechState: speechInputState,
-                  analysisState: analysisState,
-                  selectedMode: _selectedInputMode,
-                  onModeSelected: _handleInputModeSelected,
-                  onToggleListening: () =>
-                      ref.read(speechInputProvider.notifier).toggleListening(),
-                  onSubmit: _submitQuestion,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.translationValues(
+              _isDrawerOpen ? drawerWidth : 0,
+              0,
+              0,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.horizontal(
+                left: Radius.circular(_isDrawerOpen ? 32 : 0),
+              ),
+              child: _HomeCameraBody(
+                cameraState: cameraState,
+                controller: controller,
+                visionOverlayState: visionOverlayState,
+                analysisState: analysisState,
+                speechInputState: speechInputState,
+                questionController: _questionController,
+                selectedInputMode: _selectedInputMode,
+                onMenuPressed: _toggleDrawer,
+                onModeSelected: _handleInputModeSelected,
+                onToggleListening: () =>
+                    ref.read(speechInputProvider.notifier).toggleListening(),
+                onSubmit: _submitQuestion,
+                onTapWhenDrawerOpen: _isDrawerOpen ? _closeDrawer : null,
+                buildCameraLayer: _buildCameraLayer,
+              ),
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  double _drawerWidth(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width * 0.68;
+    return width.clamp(264.0, 316.0).toDouble();
+  }
+
+  void _toggleDrawer() {
+    setState(() {
+      _isDrawerOpen = !_isDrawerOpen;
+    });
+  }
+
+  void _closeDrawer() {
+    if (!_isDrawerOpen) {
+      return;
+    }
+
+    setState(() {
+      _isDrawerOpen = false;
+    });
+  }
+
+  Widget _buildCameraLayer(
+    CameraState cameraState,
+    CameraController? controller,
+  ) {
+    if (cameraState.isInitializing) {
+      return const _CameraStatusView(message: '카메라를 준비하고 있습니다.');
+    }
+
+    if (cameraState.errorMessage != null) {
+      return _CameraStatusView(message: cameraState.errorMessage!);
+    }
+
+    if (cameraState.canShowPreview && controller != null) {
+      return _CameraPreviewFill(controller: controller);
+    }
+
+    return const _CameraStatusView(message: '카메라를 준비하고 있습니다.');
   }
 
   void _handleQuestionTextChanged() {
@@ -226,24 +257,92 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
       visionContext: ref.read(visionProvider),
     );
   }
+}
 
-  Widget _buildCameraLayer(
-    CameraState cameraState,
-    CameraController? controller,
-  ) {
-    if (cameraState.isInitializing) {
-      return const _CameraStatusView(message: '카메라를 준비하고 있습니다.');
-    }
+class _HomeCameraBody extends StatelessWidget {
+  const _HomeCameraBody({
+    required this.cameraState,
+    required this.controller,
+    required this.visionOverlayState,
+    required this.analysisState,
+    required this.speechInputState,
+    required this.questionController,
+    required this.selectedInputMode,
+    required this.onMenuPressed,
+    required this.onModeSelected,
+    required this.onToggleListening,
+    required this.onSubmit,
+    required this.buildCameraLayer,
+    this.onTapWhenDrawerOpen,
+  });
 
-    if (cameraState.errorMessage != null) {
-      return _CameraStatusView(message: cameraState.errorMessage!);
-    }
+  final CameraState cameraState;
+  final CameraController? controller;
+  final VisionOverlayState visionOverlayState;
+  final AnalysisState analysisState;
+  final SpeechInputState speechInputState;
+  final TextEditingController questionController;
+  final InputMode selectedInputMode;
+  final VoidCallback onMenuPressed;
+  final ValueChanged<InputMode> onModeSelected;
+  final VoidCallback onToggleListening;
+  final VoidCallback onSubmit;
+  final VoidCallback? onTapWhenDrawerOpen;
+  final Widget Function(CameraState, CameraController?) buildCameraLayer;
 
-    if (cameraState.canShowPreview && controller != null) {
-      return _CameraPreviewFill(controller: controller);
-    }
-
-    return const _CameraStatusView(message: '카메라를 준비하고 있습니다.');
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTapWhenDrawerOpen,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: AppColors.screenBase,
+          gradient: AppColors.appBackgroundGradient,
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Stack(
+            children: [
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: AppSpacing.figmaInputPanelHeight,
+                child: buildCameraLayer(cameraState, controller),
+              ),
+              if (cameraState.canShowPreview && controller != null)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: AppSpacing.figmaInputPanelHeight,
+                  child: CameraVisionOverlay(state: visionOverlayState),
+                ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: AppTopBar(onMenuPressed: onMenuPressed),
+              ),
+              if (analysisState.isLoading)
+                const Positioned.fill(child: AnalysisLoadingView()),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: BottomInputBar(
+                  controller: questionController,
+                  speechState: speechInputState,
+                  analysisState: analysisState,
+                  selectedMode: selectedInputMode,
+                  onModeSelected: onModeSelected,
+                  onToggleListening: onToggleListening,
+                  onSubmit: onSubmit,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

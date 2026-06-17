@@ -1,6 +1,8 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
-import '../../app/theme/app_colors.dart';
+import '../../app/assets/app_assets.dart';
 import '../../app/theme/app_spacing.dart';
 import 'icon_circle_button.dart';
 
@@ -26,81 +28,35 @@ class AppTopBar extends StatelessWidget {
               shape: IconCircleButtonShape.circle,
             ),
           ),
-          const Positioned(right: 52, top: 2, child: _OutlinedLogoText()),
-          Positioned(
-            right: 14,
-            top: 8,
-            child: _ProfileButton(onPressed: () {}),
-          ),
+          const Positioned(right: 18, top: 4, child: _GlassLogo()),
         ],
       ),
     );
   }
 }
 
-class _OutlinedLogoText extends StatelessWidget {
-  const _OutlinedLogoText();
+class _GlassLogo extends StatelessWidget {
+  const _GlassLogo();
 
   @override
   Widget build(BuildContext context) {
-    const text = '살래말래?';
-    const style = TextStyle(
-      fontSize: 23,
-      fontWeight: FontWeight.w900,
-      letterSpacing: 0,
-    );
-
-    return Stack(
-      children: [
-        Text(
-          text,
-          maxLines: 1,
-          style: style.copyWith(
-            foreground: Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 3.6
-              ..color = AppColors.cardWhite.withValues(alpha: 0.92),
-          ),
-        ),
-        Text(
-          text,
-          maxLines: 1,
-          style: style.copyWith(color: AppColors.primary),
-        ),
-      ],
-    );
-  }
-}
-
-class _ProfileButton extends StatelessWidget {
-  const _ProfileButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: '프로필',
-      child: InkWell(
-        onTap: onPressed,
-        customBorder: const CircleBorder(),
-        child: Container(
-          width: 40,
-          height: 40,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: DecoratedBox(
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.cardWhite.withValues(alpha: 0.72),
-            border: Border.all(
-              color: AppColors.cardWhite.withValues(alpha: 0.58),
-            ),
+            color: Colors.white.withValues(alpha: 0.48),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.52)),
           ),
-          alignment: Alignment.center,
-          child: const Text(
-            '나',
-            style: TextStyle(
-              color: AppColors.primary,
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Image.asset(
+              AppAssets.logoWord,
+              width: 118,
+              height: 32,
+              fit: BoxFit.contain,
             ),
           ),
         ),

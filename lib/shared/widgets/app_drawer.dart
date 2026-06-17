@@ -8,19 +8,15 @@ import '../../app/theme/app_radius.dart';
 import '../../app/theme/app_spacing.dart';
 
 class AppDrawer extends StatelessWidget {
-  const AppDrawer({super.key});
+  const AppDrawer({required this.width, this.onItemSelected, super.key});
+
+  final double width;
+  final VoidCallback? onItemSelected;
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width * 0.72;
-
-    return Drawer(
-      width: width.clamp(280.0, 340.0),
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.horizontal(right: Radius.circular(36)),
-      ),
+    return SizedBox(
+      width: width,
       child: SafeArea(
         bottom: false,
         child: ClipRRect(
@@ -28,49 +24,23 @@ class AppDrawer extends StatelessWidget {
             right: Radius.circular(36),
           ),
           child: DecoratedBox(
-            decoration: const BoxDecoration(color: Color(0xFF17171A)),
+            decoration: const BoxDecoration(color: AppColors.cardWhite),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(22, 28, 18, 22),
+              padding: const EdgeInsets.fromLTRB(22, 24, 18, 22),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        AppAssets.logoAll,
-                        width: 124,
-                        fit: BoxFit.contain,
-                      ),
-                      const Spacer(),
-                      Container(
-                        width: 44,
-                        height: 44,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.cardWhite.withValues(alpha: 0.08),
-                          border: Border.all(
-                            color: AppColors.cardWhite.withValues(alpha: 0.12),
-                          ),
-                        ),
-                        child: const Text(
-                          '나',
-                          style: TextStyle(
-                            color: AppColors.cardWhite,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Image.asset(
+                    AppAssets.logoAll,
+                    width: 82,
+                    fit: BoxFit.contain,
                   ),
-                  const SizedBox(height: 46),
+                  const SizedBox(height: 42),
                   _DrawerTile(
                     icon: Icons.camera_alt_outlined,
                     label: '카메라',
                     onTap: () {
-                      Navigator.of(context).pop();
+                      onItemSelected?.call();
                       context.go(RoutePaths.home);
                     },
                   ),
@@ -78,7 +48,7 @@ class AppDrawer extends StatelessWidget {
                     icon: Icons.history_rounded,
                     label: '최근 판단',
                     onTap: () {
-                      Navigator.of(context).pop();
+                      onItemSelected?.call();
                       context.go(RoutePaths.history);
                     },
                   ),
@@ -88,7 +58,7 @@ class AppDrawer extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: AppColors.cardWhite.withValues(alpha: 0.48),
+                      color: AppColors.textSecondary.withValues(alpha: 0.72),
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
@@ -102,7 +72,7 @@ class AppDrawer extends StatelessWidget {
                       message: '설정',
                       child: InkWell(
                         onTap: () {
-                          Navigator.of(context).pop();
+                          onItemSelected?.call();
                           context.go(RoutePaths.settings);
                         },
                         customBorder: const CircleBorder(),
@@ -154,7 +124,7 @@ class _DrawerTile extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
-            color: AppColors.cardWhite,
+            color: AppColors.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.w800,
           ),
@@ -176,7 +146,7 @@ class _RecentText extends StatelessWidget {
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(
-        color: AppColors.cardWhite.withValues(alpha: 0.76),
+        color: AppColors.textSecondary,
         fontSize: 15,
         height: 1.35,
         fontWeight: FontWeight.w500,
