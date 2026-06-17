@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
+import 'app_radius.dart';
 
 abstract final class AppTheme {
   static ThemeData get lightTheme {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.blue,
+      seedColor: AppColors.primary,
       brightness: Brightness.light,
-      primary: AppColors.blue,
+      primary: AppColors.primary,
       secondary: AppColors.purple,
       error: AppColors.pass,
       surface: AppColors.cardWhite,
@@ -54,39 +55,37 @@ abstract final class AppTheme {
       cardTheme: const CardThemeData(
         color: AppColors.cardWhite,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.card),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.blue,
+          backgroundColor: AppColors.primary,
           foregroundColor: AppColors.cardWhite,
           disabledBackgroundColor: AppColors.disabledSoftButton,
           disabledForegroundColor: AppColors.textSecondary,
           elevation: 0,
           minimumSize: const Size(double.infinity, 52),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.blue,
+          foregroundColor: AppColors.primary,
           disabledForegroundColor: AppColors.textSecondary,
           minimumSize: const Size(double.infinity, 52),
           side: const BorderSide(color: AppColors.border),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.blue,
+          foregroundColor: AppColors.primary,
           disabledForegroundColor: AppColors.textSecondary,
           textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
@@ -99,19 +98,19 @@ abstract final class AppTheme {
           vertical: 14,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.blue, width: 1.5),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: AppColors.pass),
         ),
         focusedErrorBorder: OutlineInputBorder(
@@ -130,7 +129,7 @@ abstract final class AppTheme {
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.cardWhite,
-        selectedItemColor: AppColors.blue,
+        selectedItemColor: AppColors.primary,
         unselectedItemColor: AppColors.textSecondary,
         type: BottomNavigationBarType.fixed,
         elevation: 0,

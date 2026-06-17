@@ -3,8 +3,17 @@ import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/router/route_paths.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_spacing.dart';
+import '../../../features/analysis/presentation/widgets/analysis_loading_view.dart';
+import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/app_top_bar.dart';
+import '../../../shared/widgets/bottom_input_bar.dart';
+import '../../../shared/widgets/login_bottom_sheet.dart';
+import '../../../shared/widgets/segmented_input_mode.dart';
 import '../../analysis/application/analysis_provider.dart';
 import '../../analysis/application/analysis_state.dart';
 import '../../speech_input/data/models/speech_input_state.dart';
@@ -26,6 +35,12 @@ class HomeCameraScreen extends ConsumerStatefulWidget {
 class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     with WidgetsBindingObserver {
   late final TextEditingController _questionController;
+  late final CameraNotifier _cameraNotifier;
+  late final SpeechInputNotifier _speechNotifier;
+  late final VoiceOutputNotifier _voiceNotifier;
+  InputMode _selectedInputMode = InputMode.text;
+  bool _isDrawerOpen = false;
+  AppDrawerSection _section = AppDrawerSection.camera;
 
   @override
   void initState() {
@@ -33,11 +48,14 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     WidgetsBinding.instance.addObserver(this);
     _questionController = TextEditingController();
     _questionController.addListener(_handleQuestionTextChanged);
+    _cameraNotifier = ref.read(cameraProvider.notifier);
+    _speechNotifier = ref.read(speechInputProvider.notifier);
+    _voiceNotifier = ref.read(voiceOutputProvider.notifier);
 
     Future.microtask(() {
-      ref.read(cameraProvider.notifier).initializeCamera();
-      ref.read(speechInputProvider.notifier).initialize();
-      ref.read(voiceOutputProvider.notifier).initialize();
+      _cameraNotifier.initializeCamera();
+      _speechNotifier.initialize();
+      _voiceNotifier.initialize();
     });
   }
 
@@ -46,25 +64,25 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached ||
         state == AppLifecycleState.hidden) {
-      unawaited(ref.read(cameraProvider.notifier).disposeCamera());
-      unawaited(ref.read(speechInputProvider.notifier).cancelListening());
-      unawaited(ref.read(voiceOutputProvider.notifier).stop());
+      unawaited(_cameraNotifier.disposeCamera());
+      unawaited(_speechNotifier.cancelListening());
+      unawaited(_voiceNotifier.stop());
       return;
     }
 
     if (state == AppLifecycleState.resumed) {
-      unawaited(ref.read(cameraProvider.notifier).initializeCamera());
-      unawaited(ref.read(speechInputProvider.notifier).initialize());
-      unawaited(ref.read(voiceOutputProvider.notifier).initialize());
+      unawaited(_cameraNotifier.initializeCamera());
+      unawaited(_speechNotifier.initialize());
+      unawaited(_voiceNotifier.initialize());
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    unawaited(ref.read(cameraProvider.notifier).disposeCamera());
-    unawaited(ref.read(speechInputProvider.notifier).cancelListening());
-    unawaited(ref.read(voiceOutputProvider.notifier).stop());
+    unawaited(_cameraNotifier.disposeCamera());
+    unawaited(_speechNotifier.cancelListening());
+    unawaited(_voiceNotifier.stop());
     _questionController.removeListener(_handleQuestionTextChanged);
     _questionController.dispose();
     super.dispose();
@@ -91,30 +109,150 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     final speechInputState = ref.watch(speechInputProvider);
     final controller = ref.read(cameraProvider.notifier).controller;
 
+    final drawerWidth = _drawerWidth(context);
+
     return Scaffold(
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(child: _buildCameraLayer(cameraState, controller)),
-            if (cameraState.canShowPreview && controller != null)
-              Positioned.fill(
-                child: CameraVisionOverlay(state: visionOverlayState),
-              ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: _QuestionInputPanel(
-                controller: _questionController,
-                speechState: speechInputState,
-                analysisState: analysisState,
-                onToggleListening: () =>
-                    ref.read(speechInputProvider.notifier).toggleListening(),
-                onSubmit: _submitQuestion,
+      resizeToAvoidBottomInset: false,
+      body: Stack(
+        children: [
+          DecoratedBox(
+            decoration: const BoxDecoration(color: AppColors.cardWhite),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: AppDrawer(
+                width: drawerWidth,
+                selectedSection: _section,
+                onSectionSelected: _selectSection,
+                onOpenSettings: _openSettings,
+                onOpenProfile: _openProfile,
               ),
             ),
-          ],
-        ),
+          ),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.translationValues(
+              _isDrawerOpen ? drawerWidth : 0,
+              0,
+              0,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.horizontal(
+                left: Radius.circular(_isDrawerOpen ? 32 : 0),
+              ),
+              boxShadow: _isDrawerOpen
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.28),
+                        blurRadius: 32,
+                        spreadRadius: 2,
+                        offset: const Offset(-8, 0),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.horizontal(
+                left: Radius.circular(_isDrawerOpen ? 32 : 0),
+              ),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 260),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                child: _section == AppDrawerSection.history
+                    ? _HistorySectionView(
+                        key: const ValueKey(AppDrawerSection.history),
+                        onMenuPressed: _toggleDrawer,
+                        onTapArea: _handleCameraAreaTap,
+                      )
+                    : _HomeCameraBody(
+                        key: const ValueKey(AppDrawerSection.camera),
+                        cameraState: cameraState,
+                        controller: controller,
+                        visionOverlayState: visionOverlayState,
+                        analysisState: analysisState,
+                        speechInputState: speechInputState,
+                        questionController: _questionController,
+                        selectedInputMode: _selectedInputMode,
+                        onMenuPressed: _toggleDrawer,
+                        onModeSelected: _handleInputModeSelected,
+                        onToggleListening: () => ref
+                            .read(speechInputProvider.notifier)
+                            .toggleListening(),
+                        onSubmit: _submitQuestion,
+                        onTapCameraArea: _handleCameraAreaTap,
+                        buildCameraLayer: _buildCameraLayer,
+                      ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  double _drawerWidth(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width * 0.68;
+    return width.clamp(264.0, 316.0).toDouble();
+  }
+
+  void _toggleDrawer() {
+    setState(() {
+      _isDrawerOpen = !_isDrawerOpen;
+    });
+  }
+
+  void _closeDrawer() {
+    if (!_isDrawerOpen) {
+      return;
+    }
+
+    setState(() {
+      _isDrawerOpen = false;
+    });
+  }
+
+  void _handleCameraAreaTap() {
+    FocusScope.of(context).unfocus();
+    _closeDrawer();
+  }
+
+  void _selectSection(AppDrawerSection section) {
+    if (_section != section) {
+      setState(() {
+        _section = section;
+      });
+    }
+    _closeDrawer();
+  }
+
+  void _openSettings() {
+    _closeDrawer();
+    context.push(RoutePaths.settings);
+  }
+
+  void _openProfile() {
+    _closeDrawer();
+    showLoginBottomSheet(context);
+  }
+
+  Widget _buildCameraLayer(
+    CameraState cameraState,
+    CameraController? controller,
+  ) {
+    if (cameraState.isInitializing) {
+      return const _CameraStatusView(message: '카메라를 준비하고 있습니다.');
+    }
+
+    if (cameraState.errorMessage != null) {
+      return _CameraStatusView(message: cameraState.errorMessage!);
+    }
+
+    if (cameraState.canShowPreview && controller != null) {
+      return _CameraPreviewFill(controller: controller);
+    }
+
+    return const _CameraStatusView(message: '카메라를 준비하고 있습니다.');
   }
 
   void _handleQuestionTextChanged() {
@@ -126,6 +264,33 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     }
 
     ref.read(speechInputProvider.notifier).updateQuestionText(text);
+  }
+
+  void _handleInputModeSelected(InputMode mode) {
+    if (_selectedInputMode == mode) {
+      if (mode == InputMode.voice) {
+        ref.read(speechInputProvider.notifier).toggleListening();
+      }
+      return;
+    }
+
+    setState(() {
+      _selectedInputMode = mode;
+    });
+
+    final speechNotifier = ref.read(speechInputProvider.notifier);
+    final speechState = ref.read(speechInputProvider);
+
+    if (mode == InputMode.voice) {
+      if (!speechState.isListening) {
+        speechNotifier.toggleListening();
+      }
+      return;
+    }
+
+    if (speechState.isListening) {
+      speechNotifier.toggleListening();
+    }
   }
 
   Future<void> _submitQuestion() async {
@@ -158,209 +323,304 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
       visionContext: ref.read(visionProvider),
     );
   }
+}
 
-  Widget _buildCameraLayer(
-    CameraState cameraState,
-    CameraController? controller,
-  ) {
-    if (cameraState.isInitializing) {
-      return const Center(child: CircularProgressIndicator());
+/// Keeps the analysis loading overlay visible for a minimum duration so it
+/// does not flash and vanish when the request resolves very quickly.
+class _AnalysisLoadingGate extends StatefulWidget {
+  const _AnalysisLoadingGate({required this.isLoading});
+
+  final bool isLoading;
+
+  @override
+  State<_AnalysisLoadingGate> createState() => _AnalysisLoadingGateState();
+}
+
+class _AnalysisLoadingGateState extends State<_AnalysisLoadingGate> {
+  static const _minVisible = Duration(milliseconds: 1200);
+
+  bool _visible = false;
+  DateTime? _shownAt;
+  Timer? _hideTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _visible = widget.isLoading;
+    if (_visible) {
+      _shownAt = DateTime.now();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnalysisLoadingGate oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.isLoading && !oldWidget.isLoading) {
+      _hideTimer?.cancel();
+      _shownAt = DateTime.now();
+      setState(() => _visible = true);
+    } else if (!widget.isLoading && oldWidget.isLoading) {
+      final elapsed = _shownAt == null
+          ? _minVisible
+          : DateTime.now().difference(_shownAt!);
+      final remaining = _minVisible - elapsed;
+
+      if (remaining <= Duration.zero) {
+        setState(() => _visible = false);
+      } else {
+        _hideTimer?.cancel();
+        _hideTimer = Timer(remaining, () {
+          if (mounted) {
+            setState(() => _visible = false);
+          }
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _hideTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: _visible ? const AnalysisLoadingView() : const SizedBox.shrink(),
+    );
+  }
+}
+
+class _HistorySectionView extends StatelessWidget {
+  const _HistorySectionView({
+    required this.onMenuPressed,
+    required this.onTapArea,
+    super.key,
+  });
+
+  final VoidCallback onMenuPressed;
+  final VoidCallback onTapArea;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTapArea,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: AppColors.screenBase,
+          gradient: AppColors.appBackgroundGradient,
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Padding(
+                  padding: EdgeInsets.only(top: AppSpacing.topBarHeight + 10),
+                  child: Center(
+                    child: Padding(
+                      padding: AppSpacing.screen,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.history_rounded,
+                            size: 56,
+                            color: AppColors.primary.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          const Text(
+                            '최근 판단',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          const Text(
+                            '분석 기록은 이후 단계에서 표시됩니다.',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: AppTopBar(onMenuPressed: onMenuPressed),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeCameraBody extends StatelessWidget {
+  const _HomeCameraBody({
+    required this.cameraState,
+    required this.controller,
+    required this.visionOverlayState,
+    required this.analysisState,
+    required this.speechInputState,
+    required this.questionController,
+    required this.selectedInputMode,
+    required this.onMenuPressed,
+    required this.onModeSelected,
+    required this.onToggleListening,
+    required this.onSubmit,
+    required this.buildCameraLayer,
+    required this.onTapCameraArea,
+    super.key,
+  });
+
+  final CameraState cameraState;
+  final CameraController? controller;
+  final VisionOverlayState visionOverlayState;
+  final AnalysisState analysisState;
+  final SpeechInputState speechInputState;
+  final TextEditingController questionController;
+  final InputMode selectedInputMode;
+  final VoidCallback onMenuPressed;
+  final ValueChanged<InputMode> onModeSelected;
+  final VoidCallback onToggleListening;
+  final VoidCallback onSubmit;
+  final VoidCallback onTapCameraArea;
+  final Widget Function(CameraState, CameraController?) buildCameraLayer;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTapCameraArea,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: AppColors.screenBase,
+          gradient: AppColors.appBackgroundGradient,
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Stack(
+            children: [
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: AppSpacing.figmaInputPanelHeight,
+                child: buildCameraLayer(cameraState, controller),
+              ),
+              if (cameraState.canShowPreview && controller != null)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: AppSpacing.figmaInputPanelHeight,
+                  child: CameraVisionOverlay(state: visionOverlayState),
+                ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: AppTopBar(onMenuPressed: onMenuPressed),
+              ),
+              Positioned.fill(
+                child: _AnalysisLoadingGate(isLoading: analysisState.isLoading),
+              ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.viewInsetsOf(context).bottom,
+                  ),
+                  child: BottomInputBar(
+                    controller: questionController,
+                    speechState: speechInputState,
+                    analysisState: analysisState,
+                    selectedMode: selectedInputMode,
+                    onModeSelected: onModeSelected,
+                    onToggleListening: onToggleListening,
+                    onSubmit: onSubmit,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CameraPreviewFill extends StatelessWidget {
+  const _CameraPreviewFill({required this.controller});
+
+  final CameraController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final previewSize = controller.value.previewSize;
+
+    if (previewSize == null) {
+      return const ColoredBox(color: Colors.black);
     }
 
-    if (cameraState.errorMessage != null) {
-      return Center(
+    return ColoredBox(
+      color: Colors.black,
+      child: ClipRect(
+        child: SizedBox.expand(
+          child: FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: previewSize.height,
+              height: previewSize.width,
+              child: CameraPreview(controller),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CameraStatusView extends StatelessWidget {
+  const _CameraStatusView({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: AppSpacing.screen,
         child: Text(
-          cameraState.errorMessage!,
+          message,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
           style: const TextStyle(
             color: AppColors.textPrimary,
             fontSize: 18,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
           ),
         ),
-      );
-    }
-
-    if (cameraState.canShowPreview && controller != null) {
-      return ColoredBox(
-        color: Colors.black,
-        child: Center(child: CameraPreview(controller)),
-      );
-    }
-
-    return const Center(
-      child: Text(
-        '카메라를 준비하고 있습니다.',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
       ),
     );
-  }
-}
-
-class _QuestionInputPanel extends StatelessWidget {
-  const _QuestionInputPanel({
-    required this.controller,
-    required this.speechState,
-    required this.analysisState,
-    required this.onToggleListening,
-    required this.onSubmit,
-  });
-
-  final TextEditingController controller;
-  final SpeechInputState speechState;
-  final AnalysisState analysisState;
-  final VoidCallback onToggleListening;
-  final VoidCallback onSubmit;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: AppColors.cardWhite,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x1F1B1D2A),
-            blurRadius: 18,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('이거 살까 말까?', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 10),
-            TextField(
-              controller: controller,
-              minLines: 1,
-              maxLines: 3,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => onSubmit(),
-              decoration: InputDecoration(
-                hintText: '질문을 말하거나 직접 입력하세요.',
-                suffixIcon: SizedBox(
-                  width: 96,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      IconButton(
-                        tooltip: speechState.isListening
-                            ? '음성 듣기 중지'
-                            : '음성 듣기 시작',
-                        onPressed: speechState.isInitializing
-                            ? null
-                            : onToggleListening,
-                        icon: Icon(
-                          speechState.isListening
-                              ? Icons.stop_circle
-                              : Icons.mic,
-                          color: speechState.isListening
-                              ? AppColors.pass
-                              : AppColors.blue,
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: '질문 보내기',
-                        onPressed: analysisState.isLoading ? null : onSubmit,
-                        icon: analysisState.isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(
-                                Icons.send_rounded,
-                                color: AppColors.primary,
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            _QuestionStatusText(
-              speechState: speechState,
-              analysisState: analysisState,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QuestionStatusText extends StatelessWidget {
-  const _QuestionStatusText({
-    required this.speechState,
-    required this.analysisState,
-  });
-
-  final SpeechInputState speechState;
-  final AnalysisState analysisState;
-
-  @override
-  Widget build(BuildContext context) {
-    final message = _statusMessage;
-    final color =
-        speechState.errorMessage != null ||
-            analysisState.status == AnalysisStatus.failure
-        ? AppColors.pass
-        : AppColors.textSecondary;
-
-    return Text(
-      message,
-      style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w500),
-    );
-  }
-
-  String get _statusMessage {
-    if (analysisState.status == AnalysisStatus.loading) {
-      return '이미지를 분석하고 있습니다.';
-    }
-
-    if (analysisState.status == AnalysisStatus.failure &&
-        analysisState.errorMessage != null) {
-      return analysisState.errorMessage!;
-    }
-
-    if (analysisState.status == AnalysisStatus.success) {
-      return '분석 결과를 준비했습니다.';
-    }
-
-    if (speechState.errorMessage != null) {
-      return speechState.errorMessage!;
-    }
-
-    if (speechState.isInitializing) {
-      return '음성 입력을 준비하고 있습니다.';
-    }
-
-    if (!speechState.isAvailable) {
-      return '음성 입력을 사용할 수 없으면 텍스트로 입력할 수 있습니다.';
-    }
-
-    if (speechState.isListening) {
-      return '듣고 있습니다. 질문을 말해주세요.';
-    }
-
-    if (speechState.lastRecognizedWords.isNotEmpty &&
-        speechState.isFinalResult) {
-      return '음성 인식 결과가 질문에 반영되었습니다.';
-    }
-
-    return '마이크 버튼으로 말하거나 텍스트로 입력할 수 있습니다.';
   }
 }
