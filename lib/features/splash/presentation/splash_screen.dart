@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/assets/app_assets.dart';
 import '../../../app/router/route_paths.dart';
-import '../../../app/theme/app_colors.dart';
 import '../../permission/domain/permission_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -42,15 +42,40 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text(
-          '살래말래?',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 28,
-            fontWeight: FontWeight.w800,
-          ),
+    return const Scaffold(body: _SplashContent());
+  }
+}
+
+class _SplashContent extends StatelessWidget {
+  const _SplashContent();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage(AppAssets.splashBackground),
+          fit: BoxFit.cover,
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              AppAssets.logoAll,
+              width: 159,
+              height: 174,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 24),
+            Image.asset(
+              AppAssets.splashWord,
+              width: 129,
+              height: 16,
+              fit: BoxFit.contain,
+            ),
+          ],
         ),
       ),
     );
