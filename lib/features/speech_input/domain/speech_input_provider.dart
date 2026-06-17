@@ -18,6 +18,10 @@ final speechInputProvider =
     );
 
 class SpeechInputNotifier extends Notifier<SpeechInputState> {
+  /// Purchase-intent phrases that trigger an immediate capture and analysis
+  /// while the user is still speaking. Matched after whitespace is removed.
+  static const _autoCaptureKeywords = <String>['살래말래', '이거살까', '이거어때', '살까'];
+
   SpeechInputService get _service => ref.read(speechInputServiceProvider);
 
   @override
@@ -78,6 +82,7 @@ class SpeechInputNotifier extends Notifier<SpeechInputState> {
       isListening: true,
       lastRecognizedWords: '',
       isFinalResult: false,
+      autoSubmitTriggered: false,
       clearErrorMessage: true,
     );
 
@@ -113,6 +118,21 @@ class SpeechInputNotifier extends Notifier<SpeechInputState> {
     state = state.copyWith(isListening: false);
   }
 
+  /// Resets the auto-submit flag after the UI has consumed it, so a single
+  /// keyword does not trigger repeated analyses.
+  void consumeAutoSubmit() {
+    if (!state.autoSubmitTriggered) {
+      return;
+    }
+
+    state = state.copyWith(autoSubmitTriggered: false);
+  }
+
+  bool _hasAutoCaptureKeyword(String text) {
+    final normalized = text.replaceAll(RegExp(r'\s+'), '');
+    return _autoCaptureKeywords.any(normalized.contains);
+  }
+
   void _handleResult(SpeechRecognitionResult result) {
     final recognizedWords = result.recognizedWords.trim();
 
@@ -120,10 +140,14 @@ class SpeechInputNotifier extends Notifier<SpeechInputState> {
       return;
     }
 
+    final triggered =
+        state.autoSubmitTriggered || _hasAutoCaptureKeyword(recognizedWords);
+
     state = state.copyWith(
       questionText: recognizedWords,
       lastRecognizedWords: recognizedWords,
       isFinalResult: result.finalResult,
+      autoSubmitTriggered: triggered,
       clearErrorMessage: true,
     );
   }

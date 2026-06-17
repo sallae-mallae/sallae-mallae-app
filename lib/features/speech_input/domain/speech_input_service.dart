@@ -6,6 +6,10 @@ class SpeechInputService {
   SpeechInputService({SpeechToText? speechToText})
     : _speechToText = speechToText ?? SpeechToText();
 
+  /// Korean recognition locale. Without an explicit locale the plugin falls
+  /// back to the device default, which does not recognize Korean speech.
+  static const String koLocaleId = 'ko_KR';
+
   final SpeechToText _speechToText;
 
   bool get isListening => _speechToText.isListening;
@@ -21,9 +25,13 @@ class SpeechInputService {
     );
   }
 
-  Future<void> startListening({required SpeechResultListener onResult}) {
+  Future<void> startListening({
+    required SpeechResultListener onResult,
+    String localeId = koLocaleId,
+  }) {
     return _speechToText.listen(
       onResult: onResult,
+      localeId: localeId,
       listenOptions: SpeechListenOptions(
         partialResults: true,
         cancelOnError: true,

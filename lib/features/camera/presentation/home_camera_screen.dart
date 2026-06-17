@@ -91,14 +91,18 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   @override
   Widget build(BuildContext context) {
     ref.listen<SpeechInputState>(speechInputProvider, (previous, next) {
-      if (_questionController.text == next.questionText) {
-        return;
+      if (_questionController.text != next.questionText) {
+        _questionController.value = TextEditingValue(
+          text: next.questionText,
+          selection: TextSelection.collapsed(offset: next.questionText.length),
+        );
       }
 
-      _questionController.value = TextEditingValue(
-        text: next.questionText,
-        selection: TextSelection.collapsed(offset: next.questionText.length),
-      );
+      final wasTriggered = previous?.autoSubmitTriggered ?? false;
+      if (next.autoSubmitTriggered && !wasTriggered) {
+        ref.read(speechInputProvider.notifier).consumeAutoSubmit();
+        unawaited(_submitQuestion());
+      }
     });
 
     final cameraState = ref.watch(cameraProvider);

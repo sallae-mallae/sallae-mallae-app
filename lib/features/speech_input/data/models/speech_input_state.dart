@@ -7,6 +7,7 @@ class SpeechInputState {
     required this.questionText,
     required this.lastRecognizedWords,
     required this.isFinalResult,
+    required this.autoSubmitTriggered,
     this.errorMessage,
   });
 
@@ -18,6 +19,7 @@ class SpeechInputState {
       questionText = '',
       lastRecognizedWords = '',
       isFinalResult = false,
+      autoSubmitTriggered = false,
       errorMessage = null;
 
   final bool isInitializing;
@@ -27,6 +29,10 @@ class SpeechInputState {
   final String questionText;
   final String lastRecognizedWords;
   final bool isFinalResult;
+
+  /// Set when a purchase-intent keyword (e.g. "살까", "살래말래") is heard while
+  /// listening, signalling the UI to capture and analyze immediately.
+  final bool autoSubmitTriggered;
   final String? errorMessage;
 
   bool get canStartListening =>
@@ -44,6 +50,7 @@ class SpeechInputState {
     String? questionText,
     String? lastRecognizedWords,
     bool? isFinalResult,
+    bool? autoSubmitTriggered,
     String? errorMessage,
     bool clearErrorMessage = false,
   }) {
@@ -55,6 +62,7 @@ class SpeechInputState {
       questionText: questionText ?? this.questionText,
       lastRecognizedWords: lastRecognizedWords ?? this.lastRecognizedWords,
       isFinalResult: isFinalResult ?? this.isFinalResult,
+      autoSubmitTriggered: autoSubmitTriggered ?? this.autoSubmitTriggered,
       errorMessage: clearErrorMessage
           ? null
           : errorMessage ?? this.errorMessage,
