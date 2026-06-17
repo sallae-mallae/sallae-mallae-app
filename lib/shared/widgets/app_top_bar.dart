@@ -50,10 +50,10 @@ class _GlassLogo extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
             child: Image.asset(
               AppAssets.logoWord,
-              width: 96,
+              width: 92,
               height: 26,
               fit: BoxFit.contain,
             ),

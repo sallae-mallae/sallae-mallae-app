@@ -34,6 +34,9 @@ class HomeCameraScreen extends ConsumerStatefulWidget {
 class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     with WidgetsBindingObserver {
   late final TextEditingController _questionController;
+  late final CameraNotifier _cameraNotifier;
+  late final SpeechInputNotifier _speechNotifier;
+  late final VoiceOutputNotifier _voiceNotifier;
   InputMode _selectedInputMode = InputMode.text;
   bool _isDrawerOpen = false;
   AppDrawerSection _section = AppDrawerSection.camera;
@@ -44,11 +47,14 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     WidgetsBinding.instance.addObserver(this);
     _questionController = TextEditingController();
     _questionController.addListener(_handleQuestionTextChanged);
+    _cameraNotifier = ref.read(cameraProvider.notifier);
+    _speechNotifier = ref.read(speechInputProvider.notifier);
+    _voiceNotifier = ref.read(voiceOutputProvider.notifier);
 
     Future.microtask(() {
-      ref.read(cameraProvider.notifier).initializeCamera();
-      ref.read(speechInputProvider.notifier).initialize();
-      ref.read(voiceOutputProvider.notifier).initialize();
+      _cameraNotifier.initializeCamera();
+      _speechNotifier.initialize();
+      _voiceNotifier.initialize();
     });
   }
 
@@ -57,25 +63,25 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached ||
         state == AppLifecycleState.hidden) {
-      unawaited(ref.read(cameraProvider.notifier).disposeCamera());
-      unawaited(ref.read(speechInputProvider.notifier).cancelListening());
-      unawaited(ref.read(voiceOutputProvider.notifier).stop());
+      unawaited(_cameraNotifier.disposeCamera());
+      unawaited(_speechNotifier.cancelListening());
+      unawaited(_voiceNotifier.stop());
       return;
     }
 
     if (state == AppLifecycleState.resumed) {
-      unawaited(ref.read(cameraProvider.notifier).initializeCamera());
-      unawaited(ref.read(speechInputProvider.notifier).initialize());
-      unawaited(ref.read(voiceOutputProvider.notifier).initialize());
+      unawaited(_cameraNotifier.initializeCamera());
+      unawaited(_speechNotifier.initialize());
+      unawaited(_voiceNotifier.initialize());
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    unawaited(ref.read(cameraProvider.notifier).disposeCamera());
-    unawaited(ref.read(speechInputProvider.notifier).cancelListening());
-    unawaited(ref.read(voiceOutputProvider.notifier).stop());
+    unawaited(_cameraNotifier.disposeCamera());
+    unawaited(_speechNotifier.cancelListening());
+    unawaited(_voiceNotifier.stop());
     _questionController.removeListener(_handleQuestionTextChanged);
     _questionController.dispose();
     super.dispose();
@@ -311,6 +317,75 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   }
 }
 
+/// Keeps the analysis loading overlay visible for a minimum duration so it
+/// does not flash and vanish when the request resolves very quickly.
+class _AnalysisLoadingGate extends StatefulWidget {
+  const _AnalysisLoadingGate({required this.isLoading});
+
+  final bool isLoading;
+
+  @override
+  State<_AnalysisLoadingGate> createState() => _AnalysisLoadingGateState();
+}
+
+class _AnalysisLoadingGateState extends State<_AnalysisLoadingGate> {
+  static const _minVisible = Duration(milliseconds: 1200);
+
+  bool _visible = false;
+  DateTime? _shownAt;
+  Timer? _hideTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _visible = widget.isLoading;
+    if (_visible) {
+      _shownAt = DateTime.now();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnalysisLoadingGate oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.isLoading && !oldWidget.isLoading) {
+      _hideTimer?.cancel();
+      _shownAt = DateTime.now();
+      setState(() => _visible = true);
+    } else if (!widget.isLoading && oldWidget.isLoading) {
+      final elapsed = _shownAt == null
+          ? _minVisible
+          : DateTime.now().difference(_shownAt!);
+      final remaining = _minVisible - elapsed;
+
+      if (remaining <= Duration.zero) {
+        setState(() => _visible = false);
+      } else {
+        _hideTimer?.cancel();
+        _hideTimer = Timer(remaining, () {
+          if (mounted) {
+            setState(() => _visible = false);
+          }
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _hideTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: _visible ? const AnalysisLoadingView() : const SizedBox.shrink(),
+    );
+  }
+}
+
 class _HistorySectionView extends StatelessWidget {
   const _HistorySectionView({
     required this.onMenuPressed,
@@ -457,8 +532,9 @@ class _HomeCameraBody extends StatelessWidget {
                 right: 0,
                 child: AppTopBar(onMenuPressed: onMenuPressed),
               ),
-              if (analysisState.isLoading)
-                const Positioned.fill(child: AnalysisLoadingView()),
+              Positioned.fill(
+                child: _AnalysisLoadingGate(isLoading: analysisState.isLoading),
+              ),
               Align(
                 alignment: Alignment.bottomCenter,
                 child: BottomInputBar(
