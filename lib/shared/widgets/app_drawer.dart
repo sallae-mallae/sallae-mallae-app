@@ -13,6 +13,7 @@ class AppDrawer extends StatelessWidget {
     this.selectedSection = AppDrawerSection.camera,
     this.onSectionSelected,
     this.onOpenSettings,
+    this.onOpenProfile,
     super.key,
   });
 
