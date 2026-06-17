@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../analysis/application/analysis_provider.dart';
+import '../../analysis/application/analysis_state.dart';
 import '../../speech_input/data/models/speech_input_state.dart';
 import '../../speech_input/domain/speech_input_provider.dart';
 import '../../vision/domain/vision_provider.dart';
@@ -82,6 +84,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     });
 
     final cameraState = ref.watch(cameraProvider);
+    final analysisState = ref.watch(analysisProvider);
     final visionOverlayState = VisionOverlayState.fromContext(
       ref.watch(visionProvider),
     );
@@ -101,9 +104,11 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
               alignment: Alignment.bottomCenter,
               child: _QuestionInputPanel(
                 controller: _questionController,
-                state: speechInputState,
+                speechState: speechInputState,
+                analysisState: analysisState,
                 onToggleListening: () =>
                     ref.read(speechInputProvider.notifier).toggleListening(),
+                onSubmit: _submitQuestion,
               ),
             ),
           ],
@@ -121,6 +126,37 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     }
 
     ref.read(speechInputProvider.notifier).updateQuestionText(text);
+  }
+
+  Future<void> _submitQuestion() async {
+    if (ref.read(analysisProvider).isLoading) {
+      return;
+    }
+
+    final question = _questionController.text.trim();
+    final analysisNotifier = ref.read(analysisProvider.notifier);
+
+    if (question.isEmpty) {
+      analysisNotifier.failWithMessage('질문을 입력해주세요.');
+      return;
+    }
+
+    await ref.read(speechInputProvider.notifier).cancelListening();
+
+    final imageFile = await ref
+        .read(cameraProvider.notifier)
+        .captureRepresentativeImage();
+
+    if (imageFile == null) {
+      analysisNotifier.failWithMessage('분석할 이미지를 촬영할 수 없습니다.');
+      return;
+    }
+
+    await analysisNotifier.analyzeProduct(
+      imageFile: imageFile,
+      question: question,
+      visionContext: ref.read(visionProvider),
+    );
   }
 
   Widget _buildCameraLayer(
@@ -169,13 +205,17 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
 class _QuestionInputPanel extends StatelessWidget {
   const _QuestionInputPanel({
     required this.controller,
-    required this.state,
+    required this.speechState,
+    required this.analysisState,
     required this.onToggleListening,
+    required this.onSubmit,
   });
 
   final TextEditingController controller;
-  final SpeechInputState state;
+  final SpeechInputState speechState;
+  final AnalysisState analysisState;
   final VoidCallback onToggleListening;
+  final VoidCallback onSubmit;
 
   @override
   Widget build(BuildContext context) {
@@ -204,20 +244,57 @@ class _QuestionInputPanel extends StatelessWidget {
               minLines: 1,
               maxLines: 3,
               textInputAction: TextInputAction.done,
+              onSubmitted: (_) => onSubmit(),
               decoration: InputDecoration(
                 hintText: '질문을 말하거나 직접 입력하세요.',
-                suffixIcon: IconButton(
-                  tooltip: state.isListening ? '음성 듣기 중지' : '음성 듣기 시작',
-                  onPressed: state.isInitializing ? null : onToggleListening,
-                  icon: Icon(
-                    state.isListening ? Icons.stop_circle : Icons.mic,
-                    color: state.isListening ? AppColors.pass : AppColors.blue,
+                suffixIcon: SizedBox(
+                  width: 96,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      IconButton(
+                        tooltip: speechState.isListening
+                            ? '음성 듣기 중지'
+                            : '음성 듣기 시작',
+                        onPressed: speechState.isInitializing
+                            ? null
+                            : onToggleListening,
+                        icon: Icon(
+                          speechState.isListening
+                              ? Icons.stop_circle
+                              : Icons.mic,
+                          color: speechState.isListening
+                              ? AppColors.pass
+                              : AppColors.blue,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: '질문 보내기',
+                        onPressed: analysisState.isLoading ? null : onSubmit,
+                        icon: analysisState.isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.send_rounded,
+                                color: AppColors.primary,
+                              ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 8),
-            _SpeechInputStatusText(state: state),
+            _QuestionStatusText(
+              speechState: speechState,
+              analysisState: analysisState,
+            ),
           ],
         ),
       ),
@@ -225,15 +302,21 @@ class _QuestionInputPanel extends StatelessWidget {
   }
 }
 
-class _SpeechInputStatusText extends StatelessWidget {
-  const _SpeechInputStatusText({required this.state});
+class _QuestionStatusText extends StatelessWidget {
+  const _QuestionStatusText({
+    required this.speechState,
+    required this.analysisState,
+  });
 
-  final SpeechInputState state;
+  final SpeechInputState speechState;
+  final AnalysisState analysisState;
 
   @override
   Widget build(BuildContext context) {
     final message = _statusMessage;
-    final color = state.errorMessage != null
+    final color =
+        speechState.errorMessage != null ||
+            analysisState.status == AnalysisStatus.failure
         ? AppColors.pass
         : AppColors.textSecondary;
 
@@ -244,23 +327,37 @@ class _SpeechInputStatusText extends StatelessWidget {
   }
 
   String get _statusMessage {
-    if (state.errorMessage != null) {
-      return state.errorMessage!;
+    if (analysisState.status == AnalysisStatus.loading) {
+      return '이미지를 분석하고 있습니다.';
     }
 
-    if (state.isInitializing) {
+    if (analysisState.status == AnalysisStatus.failure &&
+        analysisState.errorMessage != null) {
+      return analysisState.errorMessage!;
+    }
+
+    if (analysisState.status == AnalysisStatus.success) {
+      return '분석 결과를 준비했습니다.';
+    }
+
+    if (speechState.errorMessage != null) {
+      return speechState.errorMessage!;
+    }
+
+    if (speechState.isInitializing) {
       return '음성 입력을 준비하고 있습니다.';
     }
 
-    if (!state.isAvailable) {
+    if (!speechState.isAvailable) {
       return '음성 입력을 사용할 수 없으면 텍스트로 입력할 수 있습니다.';
     }
 
-    if (state.isListening) {
+    if (speechState.isListening) {
       return '듣고 있습니다. 질문을 말해주세요.';
     }
 
-    if (state.lastRecognizedWords.isNotEmpty && state.isFinalResult) {
+    if (speechState.lastRecognizedWords.isNotEmpty &&
+        speechState.isFinalResult) {
       return '음성 인식 결과가 질문에 반영되었습니다.';
     }
 

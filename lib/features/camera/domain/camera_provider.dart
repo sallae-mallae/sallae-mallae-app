@@ -93,6 +93,22 @@ class CameraNotifier extends Notifier<CameraState> {
     }
   }
 
+  Future<XFile?> captureRepresentativeImage() async {
+    final wasStreaming = state.isStreaming;
+
+    if (wasStreaming) {
+      await stopImageStream();
+    }
+
+    try {
+      return await takePicture();
+    } finally {
+      if (wasStreaming && state.isInitialized) {
+        await startImageStream();
+      }
+    }
+  }
+
   Future<void> disposeCamera() async {
     await _manager.dispose();
     await ref.read(visionProvider.notifier).disposeVision();
