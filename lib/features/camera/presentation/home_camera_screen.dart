@@ -99,6 +99,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
 
     return Scaffold(
       drawer: const AppDrawer(),
+      drawerScrimColor: Colors.black.withValues(alpha: 0.62),
       body: DecoratedBox(
         decoration: const BoxDecoration(
           color: AppColors.screenBase,

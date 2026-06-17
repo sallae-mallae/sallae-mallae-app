@@ -50,8 +50,8 @@ class _QualityGuide extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final backgroundColor = canSuggestCapture
-        ? AppColors.buy.withValues(alpha: 0.92)
-        : AppColors.textPrimary.withValues(alpha: 0.78);
+        ? AppColors.primary.withValues(alpha: 0.88)
+        : AppColors.textPrimary.withValues(alpha: 0.72);
 
     return Align(
       alignment: Alignment.center,
@@ -92,11 +92,11 @@ class _DetectionBoxPainter extends CustomPainter {
     }
 
     final strokePaint = Paint()
-      ..color = AppColors.buy
+      ..color = AppColors.primary
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
     final fillPaint = Paint()
-      ..color = AppColors.buy.withValues(alpha: 0.12)
+      ..color = AppColors.primary.withValues(alpha: 0.10)
       ..style = PaintingStyle.fill;
 
     for (final product in products) {

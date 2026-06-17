@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_radius.dart';
 
+enum IconCircleButtonShape { circle, roundedSquare }
+
 class IconCircleButton extends StatelessWidget {
   const IconCircleButton({
     required this.tooltip,
@@ -12,6 +14,7 @@ class IconCircleButton extends StatelessWidget {
     this.icon,
     this.assetPath,
     this.isPrimary = false,
+    this.shape = IconCircleButtonShape.roundedSquare,
     super.key,
   }) : assert(icon != null || assetPath != null);
 
@@ -20,9 +23,17 @@ class IconCircleButton extends StatelessWidget {
   final String tooltip;
   final VoidCallback? onPressed;
   final bool isPrimary;
+  final IconCircleButtonShape shape;
 
   @override
   Widget build(BuildContext context) {
+    final borderRadius = BorderRadius.circular(
+      shape == IconCircleButtonShape.circle ? AppRadius.pill : AppRadius.md,
+    );
+    final buttonShape = shape == IconCircleButtonShape.circle
+        ? const CircleBorder()
+        : RoundedRectangleBorder(borderRadius: borderRadius);
+
     final button = IconButton(
       tooltip: tooltip,
       onPressed: onPressed,
@@ -34,21 +45,19 @@ class IconCircleButton extends StatelessWidget {
         minimumSize: const Size.square(40),
         fixedSize: const Size.square(40),
         backgroundColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
+        shape: buttonShape,
       ),
     );
 
     if (!isPrimary) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: borderRadius,
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: AppColors.cardWhite.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderRadius: borderRadius,
               border: Border.all(
                 color: AppColors.cardWhite.withValues(alpha: 0.62),
               ),
@@ -62,7 +71,7 @@ class IconCircleButton extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: borderRadius,
         boxShadow: const [
           BoxShadow(
             color: Color(0x389571FA),

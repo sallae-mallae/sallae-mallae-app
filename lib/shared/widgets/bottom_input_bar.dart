@@ -218,8 +218,7 @@ class _QuestionInputRow extends StatelessWidget {
           )
         else
           IconCircleButton(
-            icon: analysisState.isLoading ? Icons.hourglass_top_rounded : null,
-            assetPath: analysisState.isLoading ? null : AppAssets.send,
+            assetPath: AppAssets.send,
             tooltip: '질문 보내기',
             onPressed: analysisState.isLoading ? null : onSubmit,
             isPrimary: true,
