@@ -1,6 +1,8 @@
 import 'package:go_router/go_router.dart';
 import 'package:sallae_mallae_app/features/camera/presentation/home_camera_screen.dart';
 import 'package:sallae_mallae_app/features/auth/presentation/signup_screen.dart';
+import 'package:sallae_mallae_app/features/history/domain/entities/history_item.dart';
+import 'package:sallae_mallae_app/features/history/presentation/history_detail_screen.dart';
 import 'package:sallae_mallae_app/features/history/presentation/history_screen.dart';
 import 'package:sallae_mallae_app/features/permission/presentation/permission_guide_screen.dart';
 import 'package:sallae_mallae_app/features/settings/presentation/settings_screen.dart';
@@ -26,6 +28,11 @@ final appRouter = GoRouter(
     GoRoute(
       path: RoutePaths.history,
       builder: (context, state) => const HistoryScreen(),
+    ),
+    GoRoute(
+      path: RoutePaths.historyDetail,
+      builder: (context, state) =>
+          HistoryDetailScreen(item: state.extra as HistoryItem),
     ),
     GoRoute(
       path: RoutePaths.settings,

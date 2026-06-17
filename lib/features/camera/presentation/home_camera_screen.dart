@@ -18,6 +18,9 @@ import '../../../shared/widgets/login_bottom_sheet.dart';
 import '../../../shared/widgets/segmented_input_mode.dart';
 import '../../analysis/application/analysis_provider.dart';
 import '../../analysis/application/analysis_state.dart';
+import '../../history/application/history_provider.dart';
+import '../../history/domain/entities/history_item.dart';
+import '../../history/presentation/widgets/history_list_view.dart';
 import '../../speech_input/data/models/speech_input_state.dart';
 import '../../speech_input/domain/speech_input_provider.dart';
 import '../../vision/domain/vision_provider.dart';
@@ -336,11 +339,28 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
       return;
     }
 
+    final visionContext = ref.read(visionProvider);
+
     await analysisNotifier.analyzeProduct(
       imageFile: imageFile,
       question: question,
-      visionContext: ref.read(visionProvider),
+      visionContext: visionContext,
     );
+
+    final analysisResult = ref.read(analysisProvider);
+    if (analysisResult.status == AnalysisStatus.success &&
+        analysisResult.result != null) {
+      await ref
+          .read(historyProvider.notifier)
+          .add(
+            HistoryItem.fromResult(
+              result: analysisResult.result!,
+              question: question,
+              imagePath: imageFile.path,
+              visionContext: visionContext,
+            ),
+          );
+    }
   }
 
   /// Reads the verdict and recommendation aloud once an analysis succeeds.
@@ -467,45 +487,10 @@ class _HistorySectionView extends StatelessWidget {
             children: [
               Positioned.fill(
                 child: Padding(
-                  padding: EdgeInsets.only(top: AppSpacing.topBarHeight + 10),
-                  child: Center(
-                    child: Padding(
-                      padding: AppSpacing.screen,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.history_rounded,
-                            size: 56,
-                            color: AppColors.primary.withValues(alpha: 0.5),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          const Text(
-                            '최근 판단',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          const Text(
-                            '분석 기록은 이후 단계에서 표시됩니다.',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  padding: const EdgeInsets.only(
+                    top: AppSpacing.topBarHeight + 10,
                   ),
+                  child: const HistoryListView(),
                 ),
               ),
               Positioned(
