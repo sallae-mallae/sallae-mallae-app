@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -58,6 +57,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   final List<ChatMessage> _messages = <ChatMessage>[];
   String _lastQuestion = '';
   String? _lastImagePath;
+  int? _sessionId;
   bool _isSubmitting = false;
 
   @override
@@ -390,11 +390,11 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     ref.read(speechInputProvider.notifier).updateQuestionText('');
 
     _lastQuestion = question;
-    // Only take a fresh photo when the user actually asks for a new verdict
-    // (a purchase-intent phrase) or when we have no previous photo. Otherwise
-    // reuse the last photo and just send the updated question.
-    final captureNew = _lastImagePath == null || hasPurchaseIntent(question);
-    await _runAnalysis(question, captureNewImage: captureNew);
+    // Send a fresh photo only for a new verdict (a purchase-intent phrase) or
+    // when there is no active session yet. Otherwise omit the image and let the
+    // server reuse the session's last photo.
+    final sendNewImage = _sessionId == null || hasPurchaseIntent(question);
+    await _runAnalysis(question, captureNewImage: sendNewImage);
   }
 
   /// Re-runs the last question without adding a new chat bubble.
@@ -402,8 +402,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     if (_isSubmitting || _lastQuestion.isEmpty) {
       return;
     }
-    // Retry against the same photo when one is available.
-    await _runAnalysis(_lastQuestion, captureNewImage: _lastImagePath == null);
+    await _runAnalysis(_lastQuestion, captureNewImage: _sessionId == null);
   }
 
   Future<void> _runAnalysis(
@@ -422,43 +421,44 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     try {
       await ref.read(speechInputProvider.notifier).cancelListening();
 
-      // Reuse the previous photo when the question has no purchase intent and
-      // the cached file still exists; otherwise capture a fresh one.
-      final cachedPath = _lastImagePath;
-      final XFile? imageFile =
-          (!captureNewImage &&
-              cachedPath != null &&
-              File(cachedPath).existsSync())
-          ? XFile(cachedPath)
-          : await ref
-                .read(cameraProvider.notifier)
-                .captureRepresentativeImage();
-
-      if (imageFile == null) {
-        analysisNotifier.failWithMessage('분석할 이미지를 촬영할 수 없습니다.');
-        return;
+      // Capture a fresh photo when needed; otherwise send none so the server
+      // reuses the session's last photo (the cached path keeps driving the
+      // local thumbnail).
+      XFile? imageFile;
+      if (captureNewImage) {
+        imageFile = await ref
+            .read(cameraProvider.notifier)
+            .captureRepresentativeImage();
+        if (imageFile == null) {
+          analysisNotifier.failWithMessage('분석할 이미지를 촬영할 수 없습니다.');
+          return;
+        }
+        _lastImagePath = imageFile.path;
       }
-
-      _lastImagePath = imageFile.path;
 
       final visionContext = ref.read(visionProvider);
       final settings = ref.read(appSettingsProvider);
+      final session = ref.read(authProvider).asData?.value;
 
       await analysisNotifier.analyzeProduct(
         imageFile: imageFile,
         question: question,
         visionContext: visionContext,
-        saveImage: settings.photoServerSave,
-        aiModel: settings.aiModel.isEmpty ? null : settings.aiModel,
+        sessionId: _sessionId,
+        userId: session?.userId,
+        proMode: settings.proMode,
       );
 
       final analysisResult = ref.read(analysisProvider);
       if (analysisResult.status == AnalysisStatus.success &&
           analysisResult.result != null) {
-        final isAuthenticated =
-            ref.read(authProvider).asData?.value.isAuthenticated ?? false;
+        final result = analysisResult.result!;
+        // Track the session the server created/continued and refresh the
+        // drawer's chat room list so a new session appears there.
+        _sessionId = result.sessionId ?? _sessionId;
+        ref.invalidate(chatRoomsProvider);
 
-        if (isAuthenticated) {
+        if (session?.isAuthenticated ?? false) {
           // The server already saved this analysis; refresh the server list.
           ref.invalidate(serverHistoryProvider);
         } else {
@@ -466,9 +466,9 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
               .read(historyProvider.notifier)
               .add(
                 HistoryItem.fromResult(
-                  result: analysisResult.result!,
+                  result: result,
                   question: question,
-                  imagePath: imageFile.path,
+                  imagePath: _lastImagePath,
                   visionContext: visionContext,
                 ),
               );

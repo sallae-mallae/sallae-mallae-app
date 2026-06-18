@@ -9,10 +9,7 @@ class AnalyzeRepositoryImpl implements AnalyzeRepository {
   final AnalyzeRemoteDatasource _remoteDatasource;
 
   @override
-  Future<AnalyzeResponse> analyze({
-    required AnalyzeRequest request,
-    String? aiModel,
-  }) {
-    return _remoteDatasource.analyze(request: request, aiModel: aiModel);
+  Future<AnalyzeResponse> analyze({required AnalyzeRequest request}) {
+    return _remoteDatasource.analyze(request: request);
   }
 }

@@ -1,7 +1,10 @@
+import '../../../chat/data/models/chat_message_dto.dart';
 import '../../domain/entities/buy_decision.dart';
 
+/// Response of `POST /api/v1/chat/analyze`.
 class AnalyzeResponse {
   const AnalyzeResponse({
+    required this.sessionId,
     required this.verdict,
     required this.verdictLabel,
     required this.productInfo,
@@ -10,11 +13,12 @@ class AnalyzeResponse {
     required this.cons,
     required this.caution,
     required this.recommendation,
-    required this.caption,
-    required this.ragUsed,
-    required this.historyId,
+    required this.proMode,
+    required this.imageReused,
+    required this.messages,
   });
 
+  final int sessionId;
   final String verdict;
   final String verdictLabel;
   final String productInfo;
@@ -23,14 +27,15 @@ class AnalyzeResponse {
   final String cons;
   final String caution;
   final String recommendation;
-  final String caption;
-  final bool ragUsed;
-  final int historyId;
+  final bool proMode;
+  final bool imageReused;
+  final List<ChatMessageDto> messages;
 
   BuyDecision get decision => BuyDecisionMapper.fromVerdict(verdict);
 
   factory AnalyzeResponse.fromJson(Map<String, dynamic> json) {
     return AnalyzeResponse(
+      sessionId: json['session_id'] as int? ?? 0,
       verdict: json['verdict'] as String? ?? '',
       verdictLabel: json['verdict_label'] as String? ?? '',
       productInfo: json['product_info'] as String? ?? '',
@@ -39,25 +44,14 @@ class AnalyzeResponse {
       cons: json['cons'] as String? ?? '',
       caution: json['caution'] as String? ?? '',
       recommendation: json['recommendation'] as String? ?? '',
-      caption: json['caption'] as String? ?? '',
-      ragUsed: json['rag_used'] as bool? ?? false,
-      historyId: json['history_id'] as int? ?? 0,
+      proMode: json['pro_mode'] as bool? ?? false,
+      imageReused: json['image_reused'] as bool? ?? false,
+      messages:
+          (json['messages'] as List<dynamic>?)
+              ?.whereType<Map<String, dynamic>>()
+              .map(ChatMessageDto.fromJson)
+              .toList(growable: false) ??
+          const [],
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'verdict': verdict,
-      'verdict_label': verdictLabel,
-      'product_info': productInfo,
-      'reason': reason,
-      'pros': pros,
-      'cons': cons,
-      'caution': caution,
-      'recommendation': recommendation,
-      'caption': caption,
-      'rag_used': ragUsed,
-      'history_id': historyId,
-    };
   }
 }

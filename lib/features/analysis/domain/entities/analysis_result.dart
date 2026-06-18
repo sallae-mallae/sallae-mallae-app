@@ -12,9 +12,11 @@ class AnalysisResult {
     required this.cons,
     required this.caution,
     required this.recommendation,
-    required this.caption,
-    required this.ragUsed,
-    required this.historyId,
+    this.sessionId,
+    this.imageReused = false,
+    this.caption = '',
+    this.ragUsed = false,
+    this.historyId = 0,
   });
 
   final BuyDecision decision;
@@ -26,6 +28,12 @@ class AnalysisResult {
   final String cons;
   final String caution;
   final String recommendation;
+
+  /// Chat session this verdict belongs to (from `/chat/analyze`).
+  final int? sessionId;
+
+  /// Whether the server reused the session's previous photo for this verdict.
+  final bool imageReused;
   final String caption;
   final bool ragUsed;
   final int historyId;
@@ -41,9 +49,8 @@ class AnalysisResult {
       cons: response.cons,
       caution: response.caution,
       recommendation: response.recommendation,
-      caption: response.caption,
-      ragUsed: response.ragUsed,
-      historyId: response.historyId,
+      sessionId: response.sessionId,
+      imageReused: response.imageReused,
     );
   }
 }
