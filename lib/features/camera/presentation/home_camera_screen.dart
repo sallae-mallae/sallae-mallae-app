@@ -21,6 +21,7 @@ import '../../analysis/application/analysis_state.dart';
 import '../../history/application/history_provider.dart';
 import '../../history/domain/entities/history_item.dart';
 import '../../history/presentation/widgets/history_list_view.dart';
+import '../../settings/application/app_settings_provider.dart';
 import '../../speech_input/data/models/speech_input_state.dart';
 import '../../speech_input/domain/speech_input_provider.dart';
 import '../../vision/domain/vision_provider.dart';
@@ -107,7 +108,9 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
       final wasTriggered = previous?.autoSubmitTriggered ?? false;
       if (next.autoSubmitTriggered && !wasTriggered) {
         ref.read(speechInputProvider.notifier).consumeAutoSubmit();
-        unawaited(_submitQuestion());
+        if (ref.read(appSettingsProvider).voiceAutoSend) {
+          unawaited(_submitQuestion());
+        }
       }
     });
 
@@ -346,11 +349,14 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     }
 
     final visionContext = ref.read(visionProvider);
+    final settings = ref.read(appSettingsProvider);
 
     await analysisNotifier.analyzeProduct(
       imageFile: imageFile,
       question: question,
       visionContext: visionContext,
+      saveImage: settings.photoServerSave,
+      aiModel: settings.aiModel.isEmpty ? null : settings.aiModel,
     );
 
     final analysisResult = ref.read(analysisProvider);

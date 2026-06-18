@@ -9,6 +9,8 @@ import '../../../app/theme/app_radius.dart';
 import '../../../shared/widgets/primary_action_button.dart';
 import '../../voice_output/data/models/tts_voice.dart';
 import '../../voice_output/domain/voice_output_provider.dart';
+import '../application/app_settings_provider.dart';
+import '../domain/app_settings.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -19,10 +21,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   static const _inputModes = ['텍스트', '음성'];
-
-  String _inputMode = '텍스트';
-  bool _voiceAutoSend = true;
-  bool _photoServerSave = false;
 
   @override
   void initState() {
@@ -41,6 +39,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final voiceState = ref.watch(voiceOutputProvider);
+    final settings = ref.watch(appSettingsProvider);
+    final settingsNotifier = ref.read(appSettingsProvider.notifier);
 
     return Scaffold(
       body: DecoratedBox(
@@ -82,30 +82,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         _SettingsRow(
                           label: '기본 입력 방식',
                           trailing: _InputModeDropdown(
-                            value: _inputMode,
+                            value:
+                                settings.defaultInputMode == AppInputMode.voice
+                                ? '음성'
+                                : '텍스트',
                             values: _inputModes,
                             onChanged: (value) =>
-                                setState(() => _inputMode = value),
+                                settingsNotifier.setDefaultInputMode(
+                                  value == '음성'
+                                      ? AppInputMode.voice
+                                      : AppInputMode.text,
+                                ),
                           ),
                         ),
                         const _RowDivider(),
                         _SettingsRow(
                           label: '음성 자동 전송',
                           trailing: Switch.adaptive(
-                            value: _voiceAutoSend,
+                            value: settings.voiceAutoSend,
                             activeColor: AppColors.primary,
-                            onChanged: (value) =>
-                                setState(() => _voiceAutoSend = value),
+                            onChanged: settingsNotifier.setVoiceAutoSend,
                           ),
                         ),
                         const _RowDivider(),
                         _SettingsRow(
                           label: '사진 서버 저장',
                           trailing: Switch.adaptive(
-                            value: _photoServerSave,
+                            value: settings.photoServerSave,
                             activeColor: AppColors.primary,
-                            onChanged: (value) =>
-                                setState(() => _photoServerSave = value),
+                            onChanged: settingsNotifier.setPhotoServerSave,
                           ),
                         ),
                         const _RowDivider(),
