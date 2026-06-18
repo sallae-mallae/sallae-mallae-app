@@ -39,70 +39,71 @@ class BottomInputBar extends StatelessWidget {
         : MediaQuery.paddingOf(context).bottom;
     final hintText = _hintText;
 
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppColors.cardWhite.withValues(alpha: 0.78),
-            border: Border(
-              top: BorderSide(
+    return Padding(
+      padding: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomPadding),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.cardWhite.withValues(alpha: 0.78),
+              border: Border.all(
                 color: AppColors.cardWhite.withValues(alpha: 0.74),
               ),
             ),
-          ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(16, 22, 16, 16 + bottomPadding),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  height: 40,
-                  child: SegmentedInputMode(
-                    selectedMode: selectedMode,
-                    onModeSelected: onModeSelected,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 22, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    height: 40,
+                    child: SegmentedInputMode(
+                      selectedMode: selectedMode,
+                      onModeSelected: onModeSelected,
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  transitionBuilder: (child, animation) {
-                    final offset = Tween<Offset>(
-                      begin: selectedMode == InputMode.voice
-                          ? const Offset(0.08, 0)
-                          : const Offset(-0.08, 0),
-                      end: Offset.zero,
-                    ).animate(animation);
+                  const SizedBox(height: AppSpacing.sm),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) {
+                      final offset = Tween<Offset>(
+                        begin: selectedMode == InputMode.voice
+                            ? const Offset(0.08, 0)
+                            : const Offset(-0.08, 0),
+                        end: Offset.zero,
+                      ).animate(animation);
 
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(position: offset, child: child),
-                    );
-                  },
-                  child: _QuestionInputRow(
-                    key: ValueKey(selectedMode),
-                    controller: controller,
-                    hintText: hintText,
-                    speechState: speechState,
-                    analysisState: analysisState,
-                    selectedMode: selectedMode,
-                    onToggleListening: onToggleListening,
-                    onSubmit: onSubmit,
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(position: offset, child: child),
+                      );
+                    },
+                    child: _QuestionInputRow(
+                      key: ValueKey(selectedMode),
+                      controller: controller,
+                      hintText: hintText,
+                      speechState: speechState,
+                      analysisState: analysisState,
+                      selectedMode: selectedMode,
+                      onToggleListening: onToggleListening,
+                      onSubmit: onSubmit,
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Padding(
-                  padding: const EdgeInsets.only(left: 6),
-                  child: _InputStatusText(
-                    speechState: speechState,
-                    analysisState: analysisState,
+                  const SizedBox(height: AppSpacing.xs),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: _InputStatusText(
+                      speechState: speechState,
+                      analysisState: analysisState,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
