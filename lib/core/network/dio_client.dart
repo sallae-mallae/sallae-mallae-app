@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:sallae_mallae_app/core/network/auth_interceptor.dart';
 import 'package:sallae_mallae_app/core/network/network_interceptor.dart';
 
 import 'api_constants.dart';
@@ -18,6 +19,7 @@ abstract final class DioClient {
       ),
     );
 
+    dio.interceptors.add(AuthInterceptor());
     dio.interceptors.add(NetworkInterceptor());
 
     return dio;

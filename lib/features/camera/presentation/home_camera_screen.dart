@@ -8,14 +8,18 @@ import 'package:go_router/go_router.dart';
 import '../../../app/router/route_paths.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../features/analysis/domain/entities/analysis_result.dart';
 import '../../../features/analysis/presentation/widgets/analysis_loading_view.dart';
+import '../../../features/analysis/presentation/widgets/analysis_result_view.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../shared/widgets/bottom_input_bar.dart';
-import '../../../shared/widgets/login_bottom_sheet.dart';
 import '../../../shared/widgets/segmented_input_mode.dart';
 import '../../analysis/application/analysis_provider.dart';
 import '../../analysis/application/analysis_state.dart';
+import '../../history/application/history_provider.dart';
+import '../../history/domain/entities/history_item.dart';
+import '../../history/presentation/widgets/history_list_view.dart';
 import '../../speech_input/data/models/speech_input_state.dart';
 import '../../speech_input/domain/speech_input_provider.dart';
 import '../../vision/domain/vision_provider.dart';
@@ -91,14 +95,30 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   @override
   Widget build(BuildContext context) {
     ref.listen<SpeechInputState>(speechInputProvider, (previous, next) {
-      if (_questionController.text == next.questionText) {
+      if (_questionController.text != next.questionText) {
+        _questionController.value = TextEditingValue(
+          text: next.questionText,
+          selection: TextSelection.collapsed(offset: next.questionText.length),
+        );
+      }
+
+      final wasTriggered = previous?.autoSubmitTriggered ?? false;
+      if (next.autoSubmitTriggered && !wasTriggered) {
+        ref.read(speechInputProvider.notifier).consumeAutoSubmit();
+        unawaited(_submitQuestion());
+      }
+    });
+
+    ref.listen<AnalysisState>(analysisProvider, (previous, next) {
+      if (next.status == previous?.status) {
         return;
       }
 
-      _questionController.value = TextEditingValue(
-        text: next.questionText,
-        selection: TextSelection.collapsed(offset: next.questionText.length),
-      );
+      if (next.status == AnalysisStatus.success && next.result != null) {
+        _speakResult(next.result!);
+      } else if (next.status == AnalysisStatus.failure) {
+        _showFailure(next.errorMessage);
+      }
     });
 
     final cameraState = ref.watch(cameraProvider);
@@ -181,6 +201,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
                             .toggleListening(),
                         onSubmit: _submitQuestion,
                         onTapCameraArea: _handleCameraAreaTap,
+                        onCloseResult: _closeResult,
                         buildCameraLayer: _buildCameraLayer,
                       ),
               ),
@@ -233,7 +254,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
 
   void _openProfile() {
     _closeDrawer();
-    showLoginBottomSheet(context);
+    context.push(RoutePaths.myPage);
   }
 
   Widget _buildCameraLayer(
@@ -317,11 +338,57 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
       return;
     }
 
+    final visionContext = ref.read(visionProvider);
+
     await analysisNotifier.analyzeProduct(
       imageFile: imageFile,
       question: question,
-      visionContext: ref.read(visionProvider),
+      visionContext: visionContext,
     );
+
+    final analysisResult = ref.read(analysisProvider);
+    if (analysisResult.status == AnalysisStatus.success &&
+        analysisResult.result != null) {
+      await ref
+          .read(historyProvider.notifier)
+          .add(
+            HistoryItem.fromResult(
+              result: analysisResult.result!,
+              question: question,
+              imagePath: imageFile.path,
+              visionContext: visionContext,
+            ),
+          );
+    }
+  }
+
+  /// Reads the verdict and recommendation aloud once an analysis succeeds.
+  void _speakResult(AnalysisResult result) {
+    final segments = [
+      result.verdictLabel.trim(),
+      result.recommendation.trim(),
+    ].where((segment) => segment.isNotEmpty).toList();
+
+    if (segments.isEmpty) {
+      return;
+    }
+
+    unawaited(_voiceNotifier.speakAiResponse(segments.join('. ')));
+  }
+
+  void _showFailure(String? message) {
+    if (message == null || message.isEmpty || !mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _closeResult() {
+    unawaited(_voiceNotifier.stop());
+    ref.read(analysisProvider.notifier).reset();
   }
 }
 
@@ -419,45 +486,10 @@ class _HistorySectionView extends StatelessWidget {
             children: [
               Positioned.fill(
                 child: Padding(
-                  padding: EdgeInsets.only(top: AppSpacing.topBarHeight + 10),
-                  child: Center(
-                    child: Padding(
-                      padding: AppSpacing.screen,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.history_rounded,
-                            size: 56,
-                            color: AppColors.primary.withValues(alpha: 0.5),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          const Text(
-                            '최근 판단',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          const Text(
-                            '분석 기록은 이후 단계에서 표시됩니다.',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  padding: const EdgeInsets.only(
+                    top: AppSpacing.topBarHeight + 10,
                   ),
+                  child: const HistoryListView(),
                 ),
               ),
               Positioned(
@@ -489,6 +521,7 @@ class _HomeCameraBody extends StatelessWidget {
     required this.onSubmit,
     required this.buildCameraLayer,
     required this.onTapCameraArea,
+    required this.onCloseResult,
     super.key,
   });
 
@@ -504,6 +537,7 @@ class _HomeCameraBody extends StatelessWidget {
   final VoidCallback onToggleListening;
   final VoidCallback onSubmit;
   final VoidCallback onTapCameraArea;
+  final VoidCallback onCloseResult;
   final Widget Function(CameraState, CameraController?) buildCameraLayer;
 
   @override
@@ -534,6 +568,14 @@ class _HomeCameraBody extends StatelessWidget {
                   bottom: AppSpacing.figmaInputPanelHeight,
                   child: CameraVisionOverlay(state: visionOverlayState),
                 ),
+              if (analysisState.status == AnalysisStatus.success &&
+                  analysisState.result != null)
+                Positioned.fill(
+                  child: AnalysisResultView(
+                    result: analysisState.result!,
+                    onClose: onCloseResult,
+                  ),
+                ),
               Positioned(
                 top: 0,
                 left: 0,
@@ -543,23 +585,24 @@ class _HomeCameraBody extends StatelessWidget {
               Positioned.fill(
                 child: _AnalysisLoadingGate(isLoading: analysisState.isLoading),
               ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.viewInsetsOf(context).bottom,
-                  ),
-                  child: BottomInputBar(
-                    controller: questionController,
-                    speechState: speechInputState,
-                    analysisState: analysisState,
-                    selectedMode: selectedInputMode,
-                    onModeSelected: onModeSelected,
-                    onToggleListening: onToggleListening,
-                    onSubmit: onSubmit,
+              if (analysisState.status != AnalysisStatus.success)
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.viewInsetsOf(context).bottom,
+                    ),
+                    child: BottomInputBar(
+                      controller: questionController,
+                      speechState: speechInputState,
+                      analysisState: analysisState,
+                      selectedMode: selectedInputMode,
+                      onModeSelected: onModeSelected,
+                      onToggleListening: onToggleListening,
+                      onSubmit: onSubmit,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
