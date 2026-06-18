@@ -26,6 +26,13 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- Development backend is served over plain HTTP. Allow cleartext
+		     loads so the app can reach it. Tighten or remove before release. -->
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>상품을 촬영해 구매 판단 질문에 사용할 수 있도록 카메라 접근이 필요합니다.</string>
 	<key>NSMicrophoneUsageDescription</key>
