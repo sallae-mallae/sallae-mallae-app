@@ -20,7 +20,18 @@ final speechInputProvider =
 class SpeechInputNotifier extends Notifier<SpeechInputState> {
   /// Purchase-intent phrases that trigger an immediate capture and analysis
   /// while the user is still speaking. Matched after whitespace is removed.
-  static const _autoCaptureKeywords = <String>['살래말래', '이거살까', '이거어때', '살까'];
+  static const _autoCaptureKeywords = <String>[
+    '살래말래',
+    '살래',
+    '살까',
+    '말래',
+    '말까',
+    '어때',
+    '살만',
+    '괜찮을까',
+    '필요할까',
+    '사도돼',
+  ];
 
   SpeechInputService get _service => ref.read(speechInputServiceProvider);
 

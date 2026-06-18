@@ -29,6 +29,7 @@ class _SignupBottomSheetState extends ConsumerState<_SignupBottomSheet> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
   final TextEditingController _passwordConfirm = TextEditingController();
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -39,17 +40,12 @@ class _SignupBottomSheetState extends ConsumerState<_SignupBottomSheet> {
     super.dispose();
   }
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
-  }
-
   Future<void> _onSignup() async {
     FocusScope.of(context).unfocus();
+    setState(() => _errorMessage = null);
 
     if (_password.text != _passwordConfirm.text) {
-      _showMessage('비밀번호가 일치하지 않아요.');
+      setState(() => _errorMessage = '비밀번호가 일치하지 않아요.');
       return;
     }
 
@@ -66,7 +62,7 @@ class _SignupBottomSheetState extends ConsumerState<_SignupBottomSheet> {
     }
 
     if (ref.read(authProvider).hasError) {
-      _showMessage('가입에 실패했어요. 입력 정보를 확인해 주세요.');
+      setState(() => _errorMessage = '가입에 실패했어요. 입력 정보를 확인해 주세요.');
       return;
     }
 
@@ -144,6 +140,17 @@ class _SignupBottomSheetState extends ConsumerState<_SignupBottomSheet> {
                     hintText: '비밀번호를 다시 입력해 주세요.',
                     obscureText: true,
                   ),
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      _errorMessage!,
+                      style: const TextStyle(
+                        color: AppColors.pass,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   PrimaryActionButton(
                     label: isLoading ? '가입 중...' : '가입하기',

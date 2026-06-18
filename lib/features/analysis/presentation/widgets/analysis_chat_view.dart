@@ -88,34 +88,40 @@ class _AnalysisChatViewState extends State<AnalysisChatView> {
   Widget build(BuildContext context) {
     final itemCount = widget.messages.length + (widget.isThinking ? 1 : 0);
 
-    return ListView.builder(
-      controller: _controller,
-      padding: AppSpacing.screen.add(
-        const EdgeInsets.symmetric(vertical: AppSpacing.md),
-      ),
-      itemCount: itemCount,
-      itemBuilder: (context, index) {
-        if (index >= widget.messages.length) {
-          return const _BubbleEntrance(
-            key: ValueKey('typing'),
-            alignment: Alignment.centerLeft,
-            child: _TypingBubble(),
-          );
-        }
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 250),
+      // Dim slightly when idle so the camera stays visible for framing the next
+      // shot; keep it solid while the AI is actively responding.
+      opacity: widget.isThinking ? 1.0 : 0.9,
+      child: ListView.builder(
+        controller: _controller,
+        padding: AppSpacing.screen.add(
+          const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        ),
+        itemCount: itemCount,
+        itemBuilder: (context, index) {
+          if (index >= widget.messages.length) {
+            return const _BubbleEntrance(
+              key: ValueKey('typing'),
+              alignment: Alignment.centerLeft,
+              child: _TypingBubble(),
+            );
+          }
 
-        final message = widget.messages[index];
-        return _BubbleEntrance(
-          key: ValueKey(index),
-          alignment: message.isUser
-              ? Alignment.centerRight
-              : Alignment.centerLeft,
-          child: _MessageBubble(
-            message: message,
-            onShowDetail: widget.onShowDetail,
-            onRetry: widget.onRetry,
-          ),
-        );
-      },
+          final message = widget.messages[index];
+          return _BubbleEntrance(
+            key: ValueKey(index),
+            alignment: message.isUser
+                ? Alignment.centerRight
+                : Alignment.centerLeft,
+            child: _MessageBubble(
+              message: message,
+              onShowDetail: widget.onShowDetail,
+              onRetry: widget.onRetry,
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -195,7 +201,9 @@ class _MessageBubble extends StatelessWidget {
       ),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: isUser ? AppColors.primary : AppColors.cardWhite,
+          color: isUser
+              ? AppColors.primary.withValues(alpha: 0.88)
+              : AppColors.cardWhite.withValues(alpha: 0.86),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(AppRadius.lg),
             topRight: const Radius.circular(AppRadius.lg),
@@ -304,7 +312,7 @@ class _TypingBubbleState extends State<_TypingBubble>
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.cardWhite,
+        color: AppColors.cardWhite.withValues(alpha: 0.86),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(AppRadius.lg),
           topRight: Radius.circular(AppRadius.lg),
