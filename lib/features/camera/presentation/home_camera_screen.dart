@@ -23,6 +23,8 @@ import '../../../shared/widgets/segmented_input_mode.dart';
 import '../../analysis/application/analysis_provider.dart';
 import '../../analysis/application/analysis_state.dart';
 import '../../auth/application/auth_provider.dart';
+import '../../chat/application/chat_rooms_provider.dart';
+import '../../chat/domain/entities/chat_room.dart';
 import '../../history/application/history_provider.dart';
 import '../../history/application/server_history_provider.dart';
 import '../../history/domain/entities/history_item.dart';
@@ -179,6 +181,8 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
                 onSectionSelected: _selectSection,
                 onOpenSettings: _openSettings,
                 onOpenProfile: _openProfile,
+                chatRooms: ref.watch(chatRoomsProvider),
+                onSelectChatRoom: _openChatRoom,
               ),
             ),
           ),
@@ -282,6 +286,15 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
       });
     }
     _closeDrawer();
+  }
+
+  void _openChatRoom(ChatRoom room) {
+    // Bring the user back to the camera home where the chat thread lives, then
+    // load the selected room's conversation.
+    setState(() => _section = AppDrawerSection.camera);
+    _closeDrawer();
+    // TODO: fetch and render this room's messages once the chat data API
+    // (GET chat room data) is available; for now we only navigate home.
   }
 
   void _openSettings() {

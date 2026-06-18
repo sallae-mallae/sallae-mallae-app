@@ -4,6 +4,7 @@ import '../../app/assets/app_assets.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_radius.dart';
 import '../../app/theme/app_spacing.dart';
+import '../../features/chat/domain/entities/chat_room.dart';
 
 enum AppDrawerSection { camera, history }
 
@@ -14,6 +15,8 @@ class AppDrawer extends StatelessWidget {
     this.onSectionSelected,
     this.onOpenSettings,
     this.onOpenProfile,
+    this.chatRooms = const <ChatRoom>[],
+    this.onSelectChatRoom,
     super.key,
   });
 
@@ -22,6 +25,10 @@ class AppDrawer extends StatelessWidget {
   final ValueChanged<AppDrawerSection>? onSectionSelected;
   final VoidCallback? onOpenSettings;
   final VoidCallback? onOpenProfile;
+
+  /// Saved chat rooms listed under "최근 항목"; tapping one loads it on the home.
+  final List<ChatRoom> chatRooms;
+  final ValueChanged<ChatRoom>? onSelectChatRoom;
 
   @override
   Widget build(BuildContext context) {
@@ -85,8 +92,24 @@ class AppDrawer extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  const _RecentText('분석 기록은 이후 단계에서 표시됩니다.'),
-                  const Spacer(),
+                  Expanded(
+                    child: chatRooms.isEmpty
+                        ? const Align(
+                            alignment: Alignment.topLeft,
+                            child: _RecentText('분석 기록은 이후 단계에서 표시됩니다.'),
+                          )
+                        : ListView.builder(
+                            padding: EdgeInsets.zero,
+                            itemCount: chatRooms.length,
+                            itemBuilder: (context, index) {
+                              final room = chatRooms[index];
+                              return _ChatRoomTile(
+                                title: room.title,
+                                onTap: () => onSelectChatRoom?.call(room),
+                              );
+                            },
+                          ),
+                  ),
                   Align(
                     alignment: Alignment.bottomRight,
                     child: Tooltip(
@@ -173,6 +196,52 @@ class _RecentText extends StatelessWidget {
         fontSize: 15,
         height: 1.35,
         fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+}
+
+class _ChatRoomTile extends StatelessWidget {
+  const _ChatRoomTile({required this.title, required this.onTap});
+
+  final String title;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 18,
+                color: AppColors.textSecondary.withValues(alpha: 0.8),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
