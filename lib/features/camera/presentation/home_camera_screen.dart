@@ -51,6 +51,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   bool _isDrawerOpen = false;
   AppDrawerSection _section = AppDrawerSection.camera;
   final List<ChatMessage> _messages = <ChatMessage>[];
+  String _lastQuestion = '';
 
   @override
   void initState() {
@@ -228,6 +229,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
                         onTapCameraArea: _handleCameraAreaTap,
                         messages: List<ChatMessage>.of(_messages),
                         onShowDetail: _showResultDetail,
+                        onRetry: _retryAnalysis,
                         buildCameraLayer: _buildCameraLayer,
                       ),
               ),
@@ -346,16 +348,30 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     }
 
     final question = _questionController.text.trim();
-    final analysisNotifier = ref.read(analysisProvider.notifier);
 
     if (question.isEmpty) {
-      analysisNotifier.failWithMessage('질문을 입력해주세요.');
+      ref.read(analysisProvider.notifier).failWithMessage('질문을 입력해주세요.');
       return;
     }
 
     setState(() => _messages.add(ChatMessage.user(question)));
     _questionController.clear();
     ref.read(speechInputProvider.notifier).updateQuestionText('');
+
+    _lastQuestion = question;
+    await _runAnalysis(question);
+  }
+
+  /// Re-runs the last question without adding a new chat bubble.
+  Future<void> _retryAnalysis() async {
+    if (ref.read(analysisProvider).isLoading || _lastQuestion.isEmpty) {
+      return;
+    }
+    await _runAnalysis(_lastQuestion);
+  }
+
+  Future<void> _runAnalysis(String question) async {
+    final analysisNotifier = ref.read(analysisProvider.notifier);
 
     await ref.read(speechInputProvider.notifier).cancelListening();
 
@@ -430,7 +446,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     final text = (message == null || message.isEmpty)
         ? '분석 결과를 가져오지 못했어요. 잠시 후 다시 시도해주세요.'
         : message;
-    setState(() => _messages.add(ChatMessage.ai(text)));
+    setState(() => _messages.add(ChatMessage.ai(text, isError: true)));
   }
 
   void _showResultDetail(AnalysisResult result) {
@@ -516,6 +532,7 @@ class _HomeCameraBody extends StatelessWidget {
     required this.onTapCameraArea,
     required this.messages,
     required this.onShowDetail,
+    required this.onRetry,
     super.key,
   });
 
@@ -533,6 +550,7 @@ class _HomeCameraBody extends StatelessWidget {
   final VoidCallback onTapCameraArea;
   final List<ChatMessage> messages;
   final ValueChanged<AnalysisResult> onShowDetail;
+  final VoidCallback onRetry;
   final Widget Function(CameraState, CameraController?) buildCameraLayer;
 
   @override
@@ -573,6 +591,7 @@ class _HomeCameraBody extends StatelessWidget {
                     messages: messages,
                     isThinking: analysisState.isLoading,
                     onShowDetail: onShowDetail,
+                    onRetry: onRetry,
                   ),
                 ),
               Positioned(

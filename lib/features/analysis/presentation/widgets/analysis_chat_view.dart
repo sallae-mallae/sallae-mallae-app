@@ -7,18 +7,29 @@ import '../../domain/entities/analysis_result.dart';
 
 /// A single message in the camera chat thread.
 class ChatMessage {
-  const ChatMessage._({required this.isUser, required this.text, this.result});
+  const ChatMessage._({
+    required this.isUser,
+    required this.text,
+    this.result,
+    this.isError = false,
+  });
 
   const ChatMessage.user(String text) : this._(isUser: true, text: text);
 
-  const ChatMessage.ai(String text, {AnalysisResult? result})
-    : this._(isUser: false, text: text, result: result);
+  const ChatMessage.ai(
+    String text, {
+    AnalysisResult? result,
+    bool isError = false,
+  }) : this._(isUser: false, text: text, result: result, isError: isError);
 
   final bool isUser;
   final String text;
 
   /// Present on an AI verdict message so the UI can offer a "자세히" detail view.
   final AnalysisResult? result;
+
+  /// Set on an AI message that reports a failure, so the UI can offer a retry.
+  final bool isError;
 }
 
 /// Chat-style transcript shown over the camera: the user's questions rise as
@@ -30,11 +41,13 @@ class AnalysisChatView extends StatefulWidget {
     required this.messages,
     required this.isThinking,
     required this.onShowDetail,
+    required this.onRetry,
   });
 
   final List<ChatMessage> messages;
   final bool isThinking;
   final ValueChanged<AnalysisResult> onShowDetail;
+  final VoidCallback onRetry;
 
   @override
   State<AnalysisChatView> createState() => _AnalysisChatViewState();
@@ -99,6 +112,7 @@ class _AnalysisChatViewState extends State<AnalysisChatView> {
           child: _MessageBubble(
             message: message,
             onShowDetail: widget.onShowDetail,
+            onRetry: widget.onRetry,
           ),
         );
       },
@@ -160,10 +174,15 @@ class _BubbleEntranceState extends State<_BubbleEntrance>
 }
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message, required this.onShowDetail});
+  const _MessageBubble({
+    required this.message,
+    required this.onShowDetail,
+    required this.onRetry,
+  });
 
   final ChatMessage message;
   final ValueChanged<AnalysisResult> onShowDetail;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -222,6 +241,31 @@ class _MessageBubble extends StatelessWidget {
                         Icons.chevron_right_rounded,
                         size: 18,
                         color: AppColors.primary,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              if (message.isError) ...[
+                const SizedBox(height: AppSpacing.xs),
+                GestureDetector(
+                  onTap: onRetry,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(
+                        Icons.refresh_rounded,
+                        size: 18,
+                        color: AppColors.primary,
+                      ),
+                      SizedBox(width: 2),
+                      Text(
+                        '다시 시도',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ],
                   ),
