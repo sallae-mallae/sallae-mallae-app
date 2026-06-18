@@ -96,7 +96,7 @@ class AppDrawer extends StatelessWidget {
                     child: chatRooms.isEmpty
                         ? const Align(
                             alignment: Alignment.topLeft,
-                            child: _RecentText('분석 기록은 이후 단계에서 표시됩니다.'),
+                            child: _RecentText('아직 대화 기록이 없어요.'),
                           )
                         : ListView.builder(
                             padding: EdgeInsets.zero,

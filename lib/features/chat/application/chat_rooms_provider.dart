@@ -9,9 +9,9 @@ final chatRemoteDatasourceProvider = Provider<ChatRemoteDatasource>((ref) {
   return ChatRemoteDatasource(ref.read(dioProvider));
 });
 
-/// Holds the list of the user's chat rooms shown in the drawer, loaded from
-/// `GET /api/v1/chat/sessions`. Only authenticated users have a server list, so
-/// guests see an empty list.
+/// Holds the list of chat rooms shown in the drawer, loaded from
+/// `GET /api/v1/chat/sessions`. The list is filtered by `user_id` when the user
+/// is signed in; otherwise all sessions are returned.
 final chatRoomsProvider = NotifierProvider<ChatRoomsNotifier, List<ChatRoom>>(
   ChatRoomsNotifier.new,
 );
@@ -22,22 +22,15 @@ class ChatRoomsNotifier extends Notifier<List<ChatRoom>> {
 
   @override
   List<ChatRoom> build() {
-    final session = ref.watch(authProvider).asData?.value;
-    if (session?.isAuthenticated ?? false) {
-      final userId = session!.userId;
-      // Defer so we never mutate state synchronously during build.
-      Future.microtask(() => _load(userId));
-    }
+    // Reload when sign-in state changes so the filter follows the user.
+    final userId = ref.watch(authProvider).asData?.value.userId;
+    // Defer so we never mutate state synchronously during build.
+    Future.microtask(() => _load(userId));
     return const <ChatRoom>[];
   }
 
-  Future<void> refresh() async {
-    final session = ref.read(authProvider).asData?.value;
-    if (session?.isAuthenticated ?? false) {
-      await _load(session!.userId);
-    } else {
-      state = const <ChatRoom>[];
-    }
+  Future<void> refresh() {
+    return _load(ref.read(authProvider).asData?.value.userId);
   }
 
   Future<void> _load(int? userId) async {
