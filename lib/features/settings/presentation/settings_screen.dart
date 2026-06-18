@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/assets/app_assets.dart';
@@ -6,20 +7,28 @@ import '../../../app/router/route_paths.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_radius.dart';
 import '../../../shared/widgets/primary_action_button.dart';
+import '../../voice_output/data/models/tts_voice.dart';
+import '../../voice_output/domain/voice_output_provider.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   static const _inputModes = ['텍스트', '음성'];
 
   String _inputMode = '텍스트';
   bool _voiceAutoSend = true;
   bool _photoServerSave = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(voiceOutputProvider.notifier).initialize());
+  }
 
   void _onDone() {
     if (context.canPop()) {
@@ -31,6 +40,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final voiceState = ref.watch(voiceOutputProvider);
+
     return Scaffold(
       body: DecoratedBox(
         decoration: const BoxDecoration(
@@ -95,6 +106,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             activeColor: AppColors.primary,
                             onChanged: (value) =>
                                 setState(() => _photoServerSave = value),
+                          ),
+                        ),
+                        const _RowDivider(),
+                        _SettingsRow(
+                          label: 'TTS 음성',
+                          trailing: _VoiceDropdown(
+                            voices: voiceState.availableVoices,
+                            selected: voiceState.selectedVoice,
+                            onChanged: (voice) => ref
+                                .read(voiceOutputProvider.notifier)
+                                .selectVoice(voice),
                           ),
                         ),
                       ],
@@ -231,6 +253,74 @@ class _ValueText extends StatelessWidget {
         color: AppColors.textPrimary,
         fontSize: 15,
         fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+}
+
+class _VoiceDropdown extends StatelessWidget {
+  const _VoiceDropdown({
+    required this.voices,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final List<TtsVoice> voices;
+  final TtsVoice? selected;
+  final ValueChanged<TtsVoice> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    if (voices.isEmpty) {
+      return const _ValueText('기본');
+    }
+
+    final value = selected != null && voices.contains(selected)
+        ? selected
+        : null;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.inputSurface,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<TtsVoice>(
+          value: value,
+          isDense: true,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          hint: const Text('기본'),
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: AppColors.primary,
+          ),
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
+          items: [
+            for (final voice in voices)
+              DropdownMenuItem(
+                value: voice,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 150),
+                  child: Text(
+                    voice.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+          ],
+          onChanged: (selected) {
+            if (selected != null) {
+              onChanged(selected);
+            }
+          },
+        ),
       ),
     );
   }
