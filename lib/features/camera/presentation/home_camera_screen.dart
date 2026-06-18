@@ -181,6 +181,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
                 onSectionSelected: _selectSection,
                 onOpenSettings: _openSettings,
                 onOpenProfile: _openProfile,
+                onNewChat: _startNewChat,
                 chatRooms: ref.watch(chatRoomsProvider),
                 onSelectChatRoom: _openChatRoom,
               ),
@@ -285,6 +286,21 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
         _section = section;
       });
     }
+    _closeDrawer();
+  }
+
+  void _startNewChat() {
+    // Drop the current session so the next analysis starts a fresh chat room.
+    setState(() {
+      _section = AppDrawerSection.camera;
+      _sessionId = null;
+      _lastQuestion = '';
+      _lastImagePath = null;
+      _messages.clear();
+    });
+    _questionController.clear();
+    ref.read(speechInputProvider.notifier).updateQuestionText('');
+    ref.read(analysisProvider.notifier).reset();
     _closeDrawer();
   }
 
