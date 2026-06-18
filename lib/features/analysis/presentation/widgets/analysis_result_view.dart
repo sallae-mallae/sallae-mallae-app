@@ -53,24 +53,21 @@ class AnalysisResultView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                _VerdictHeader(style: style, result: result),
+                const SizedBox(height: AppSpacing.md),
                 if (imagePath != null && File(imagePath!).existsSync()) ...[
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      child: Image.file(
-                        File(imagePath!),
-                        width: 104,
-                        height: 104,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                      ),
+                  ClipRRect(
+                    borderRadius: AppRadius.card,
+                    child: Image.file(
+                      File(imagePath!),
+                      width: double.infinity,
+                      height: 180,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                 ],
-                _VerdictHeader(style: style, result: result),
-                const SizedBox(height: AppSpacing.md),
                 if (result.productInfo.trim().isNotEmpty) ...[
                   _ResultCard(
                     icon: Icons.shopping_bag_outlined,
@@ -121,15 +118,6 @@ class AnalysisResultView extends StatelessWidget {
                     accent: AppColors.primary,
                     title: '추천',
                     body: result.recommendation,
-                  ),
-                ],
-                if (result.caption.trim().isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  _ResultCard(
-                    icon: Icons.notes_rounded,
-                    accent: AppColors.textSecondary,
-                    title: '상세 설명',
-                    body: result.caption,
                   ),
                 ],
                 if (result.ragUsed) ...[
