@@ -15,6 +15,7 @@ import '../../../features/analysis/presentation/widgets/analysis_result_view.dar
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../shared/widgets/bottom_input_bar.dart';
+import '../../../shared/widgets/login_bottom_sheet.dart';
 import '../../../shared/widgets/segmented_input_mode.dart';
 import '../../analysis/application/analysis_provider.dart';
 import '../../analysis/application/analysis_state.dart';
@@ -125,6 +126,23 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
         _onAnalysisSuccess(next.result!);
       } else if (next.status == AnalysisStatus.failure) {
         _onAnalysisFailure(next.errorMessage);
+      }
+    });
+
+    ref.listen<bool>(sessionExpiredProvider, (previous, next) {
+      if (next && mounted) {
+        ref.read(sessionExpiredProvider.notifier).consume();
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: const Text('세션이 만료되었어요. 다시 로그인해 주세요.'),
+              action: SnackBarAction(
+                label: '로그인',
+                onPressed: () => showLoginBottomSheet(context),
+              ),
+            ),
+          );
       }
     });
 

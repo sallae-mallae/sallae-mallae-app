@@ -7,7 +7,7 @@ import '../domain/entities/auth_session.dart';
 import '../domain/repositories/auth_repository.dart';
 
 final tokenStorageProvider = Provider<TokenStorage>((ref) {
-  return const LocalTokenStorage();
+  return SecureTokenStorage();
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -21,6 +21,21 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 final authProvider = AsyncNotifierProvider<AuthNotifier, AuthSession>(
   AuthNotifier.new,
 );
+
+/// One-shot signal raised when an authenticated session expires (a 401 while
+/// logged in). The UI consumes it to prompt the user to sign in again.
+final sessionExpiredProvider = NotifierProvider<SessionExpiredNotifier, bool>(
+  SessionExpiredNotifier.new,
+);
+
+class SessionExpiredNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void trigger() => state = true;
+
+  void consume() => state = false;
+}
 
 class AuthNotifier extends AsyncNotifier<AuthSession> {
   AuthRepository get _repository => ref.read(authRepositoryProvider);
@@ -55,5 +70,16 @@ class AuthNotifier extends AsyncNotifier<AuthSession> {
   Future<void> signOut() async {
     await _repository.signOut();
     state = const AsyncData(AuthSession.guest());
+  }
+
+  /// Called when a request returns 401. The token is already cleared by the
+  /// interceptor; reset to a guest session and, if the user had been signed in,
+  /// raise the session-expired signal so the UI can prompt a re-login.
+  void handleUnauthorized() {
+    final wasAuthenticated = state.asData?.value.isAuthenticated ?? false;
+    state = const AsyncData(AuthSession.guest());
+    if (wasAuthenticated) {
+      ref.read(sessionExpiredProvider.notifier).trigger();
+    }
   }
 }
