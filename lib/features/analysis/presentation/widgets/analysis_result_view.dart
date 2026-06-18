@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../../../../app/assets/app_assets.dart';
@@ -15,12 +17,16 @@ class AnalysisResultView extends StatelessWidget {
     super.key,
     required this.result,
     required this.onClose,
+    this.imagePath,
     this.topPadding = AppSpacing.topBarHeight + AppSpacing.xs,
     this.closeLabel = '다시 촬영하기',
   });
 
   final AnalysisResult result;
   final VoidCallback onClose;
+
+  /// Path of the captured photo, shown as a small thumbnail when available.
+  final String? imagePath;
 
   /// Space reserved above the content. Defaults to leaving room for the camera
   /// top bar when shown as a full overlay; pass a small value in a sheet.
@@ -47,6 +53,22 @@ class AnalysisResultView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (imagePath != null && File(imagePath!).existsSync()) ...[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      child: Image.file(
+                        File(imagePath!),
+                        width: 104,
+                        height: 104,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
                 _VerdictHeader(style: style, result: result),
                 const SizedBox(height: AppSpacing.md),
                 if (result.productInfo.trim().isNotEmpty) ...[

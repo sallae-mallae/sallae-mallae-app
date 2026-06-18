@@ -53,6 +53,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   AppDrawerSection _section = AppDrawerSection.camera;
   final List<ChatMessage> _messages = <ChatMessage>[];
   String _lastQuestion = '';
+  String? _lastImagePath;
   bool _isSubmitting = false;
 
   @override
@@ -401,6 +402,8 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
         return;
       }
 
+      _lastImagePath = imageFile.path;
+
       final visionContext = ref.read(visionProvider);
       final settings = ref.read(appSettingsProvider);
 
@@ -462,7 +465,11 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
       result.recommendation.trim(),
     ].where((part) => part.isNotEmpty).toList();
     final text = parts.isEmpty ? '판단을 마쳤어요.' : parts.join('\n\n');
-    setState(() => _messages.add(ChatMessage.ai(text, result: result)));
+    setState(
+      () => _messages.add(
+        ChatMessage.ai(text, result: result, imagePath: _lastImagePath),
+      ),
+    );
   }
 
   void _onAnalysisFailure(String? message) {
@@ -472,7 +479,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     setState(() => _messages.add(ChatMessage.ai(text, isError: true)));
   }
 
-  void _showResultDetail(AnalysisResult result) {
+  void _showResultDetail(AnalysisResult result, String? imagePath) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -483,6 +490,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
           borderRadius: AppRadius.sheet,
           child: AnalysisResultView(
             result: result,
+            imagePath: imagePath,
             onClose: () => Navigator.of(sheetContext).pop(),
             topPadding: AppSpacing.lg,
             closeLabel: '닫기',
@@ -573,7 +581,7 @@ class _HomeCameraBody extends StatelessWidget {
   final VoidCallback onSubmit;
   final VoidCallback onTapCameraArea;
   final List<ChatMessage> messages;
-  final ValueChanged<AnalysisResult> onShowDetail;
+  final void Function(AnalysisResult result, String? imagePath) onShowDetail;
   final VoidCallback onRetry;
   final bool isDetecting;
   final Widget Function(CameraState, CameraController?) buildCameraLayer;
