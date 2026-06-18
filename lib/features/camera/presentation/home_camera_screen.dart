@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -305,6 +307,24 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     _closeDrawer();
   }
 
+  /// Writes a base64 photo to a temp file so the existing `Image.file` flow can
+  /// show it; returns the path, or null on failure.
+  String? _decodeImageToFile(String base64Image, int sessionId, int messageId) {
+    try {
+      final commaIndex = base64Image.indexOf(',');
+      final cleaned = commaIndex >= 0
+          ? base64Image.substring(commaIndex + 1)
+          : base64Image;
+      final file = File(
+        '${Directory.systemTemp.path}/chat_${sessionId}_$messageId.jpg',
+      );
+      file.writeAsBytesSync(base64Decode(cleaned));
+      return file.path;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _openChatRoom(ChatRoom room) async {
     // Bring the user back to the camera home where the chat thread lives, then
     // load the selected room's conversation.
@@ -318,24 +338,38 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
       if (!mounted) {
         return;
       }
+
+      final loaded = detail.messages.map((m) {
+        if (m.isUser) {
+          return ChatMessage.user(m.content);
+        }
+        final data = m.data;
+        // Prefer the structured `data`; fall back to parsing the text blob for
+        // older messages that predate it.
+        final result = data != null
+            ? analysisResultFromMessageData(data)
+            : analysisResultFromContent(m.content);
+        final imagePath = (data != null && data.imageBase64.isNotEmpty)
+            ? _decodeImageToFile(data.imageBase64, detail.id, m.id)
+            : null;
+        return ChatMessage.ai(m.content, result: result, imagePath: imagePath);
+      }).toList();
+
+      // Keep the most recent photo for the local thumbnail of follow-up turns.
+      String? lastImage;
+      for (final message in loaded) {
+        if (message.imagePath != null) {
+          lastImage = message.imagePath;
+        }
+      }
+
       setState(() {
         _sessionId = detail.id;
         _lastQuestion = '';
-        // Server sessions don't carry a local photo path; the server reuses the
-        // session's stored photo for follow-up questions.
-        _lastImagePath = null;
+        _lastImagePath = lastImage;
         _messages
           ..clear()
-          ..addAll(
-            detail.messages.map(
-              (m) => m.isUser
-                  ? ChatMessage.user(m.content)
-                  : ChatMessage.ai(
-                      m.content,
-                      result: analysisResultFromContent(m.content),
-                    ),
-            ),
-          );
+          ..addAll(loaded);
       });
     } catch (_) {
       if (!mounted) {

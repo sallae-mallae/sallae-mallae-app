@@ -1,5 +1,21 @@
 import '../../analysis/domain/entities/analysis_result.dart';
 import '../../analysis/domain/entities/buy_decision.dart';
+import '../data/models/chat_message_dto.dart';
+
+/// Builds an [AnalysisResult] from a message's structured `data` field.
+AnalysisResult analysisResultFromMessageData(ChatMessageData data) {
+  return AnalysisResult(
+    decision: BuyDecisionMapper.fromVerdict(data.verdict),
+    verdict: data.verdict,
+    verdictLabel: data.verdictLabel,
+    productInfo: data.productInfo,
+    reason: data.reason,
+    pros: data.pros,
+    cons: data.cons,
+    caution: data.caution,
+    recommendation: data.recommendation,
+  );
+}
 
 /// Rebuilds a structured [AnalysisResult] from a stored assistant message.
 ///
