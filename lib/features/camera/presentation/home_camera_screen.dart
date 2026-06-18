@@ -588,6 +588,7 @@ class _HomeCameraBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
     return GestureDetector(
       onTap: onTapCameraArea,
       child: DecoratedBox(
@@ -619,7 +620,7 @@ class _HomeCameraBody extends StatelessWidget {
                   top: AppSpacing.topBarHeight,
                   left: 0,
                   right: 0,
-                  bottom: AppSpacing.figmaInputPanelHeight,
+                  bottom: AppSpacing.figmaInputPanelHeight + keyboardInset,
                   child: AnimatedOpacity(
                     duration: const Duration(milliseconds: 220),
                     // Hide the chat while the camera is detecting an object so
