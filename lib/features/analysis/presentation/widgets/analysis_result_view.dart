@@ -44,6 +44,15 @@ class AnalysisResultView extends StatelessWidget {
               children: [
                 _VerdictHeader(style: style, result: result),
                 const SizedBox(height: AppSpacing.md),
+                if (result.productInfo.trim().isNotEmpty) ...[
+                  _ResultCard(
+                    icon: Icons.shopping_bag_outlined,
+                    accent: AppColors.textSecondary,
+                    title: '상품 정보',
+                    body: result.productInfo,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
                 if (result.reason.trim().isNotEmpty)
                   _ResultCard(
                     icon: Icons.lightbulb_outline_rounded,
@@ -51,6 +60,24 @@ class AnalysisResultView extends StatelessWidget {
                     title: '이렇게 봤어요',
                     body: result.reason,
                   ),
+                if (result.pros.trim().isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _ResultCard(
+                    icon: Icons.thumb_up_outlined,
+                    accent: AppColors.buy,
+                    title: '장점',
+                    body: result.pros,
+                  ),
+                ],
+                if (result.cons.trim().isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _ResultCard(
+                    icon: Icons.thumb_down_outlined,
+                    accent: AppColors.pass,
+                    title: '단점',
+                    body: result.cons,
+                  ),
+                ],
                 if (result.caution.trim().isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.sm),
                   _ResultCard(

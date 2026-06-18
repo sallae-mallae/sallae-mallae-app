@@ -88,8 +88,14 @@ class HistoryDetailScreen extends StatelessWidget {
                       const SizedBox(height: AppSpacing.md),
                       if (item.question.trim().isNotEmpty)
                         _DetailCard(title: '질문', body: item.question),
+                      if (item.productInfo.trim().isNotEmpty)
+                        _DetailCard(title: '상품 정보', body: item.productInfo),
                       if (item.reason.trim().isNotEmpty)
                         _DetailCard(title: '이렇게 봤어요', body: item.reason),
+                      if (item.pros.trim().isNotEmpty)
+                        _DetailCard(title: '장점', body: item.pros),
+                      if (item.cons.trim().isNotEmpty)
+                        _DetailCard(title: '단점', body: item.cons),
                       if (item.caution.trim().isNotEmpty)
                         _DetailCard(title: '주의할 점', body: item.caution),
                       if (item.recommendation.trim().isNotEmpty)

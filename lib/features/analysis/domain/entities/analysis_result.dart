@@ -6,7 +6,10 @@ class AnalysisResult {
     required this.decision,
     required this.verdict,
     required this.verdictLabel,
+    required this.productInfo,
     required this.reason,
+    required this.pros,
+    required this.cons,
     required this.caution,
     required this.recommendation,
     required this.caption,
@@ -17,7 +20,10 @@ class AnalysisResult {
   final BuyDecision decision;
   final String verdict;
   final String verdictLabel;
+  final String productInfo;
   final String reason;
+  final String pros;
+  final String cons;
   final String caution;
   final String recommendation;
   final String caption;
@@ -29,7 +35,10 @@ class AnalysisResult {
       decision: response.decision,
       verdict: response.verdict,
       verdictLabel: response.verdictLabel,
+      productInfo: response.productInfo,
       reason: response.reason,
+      pros: response.pros,
+      cons: response.cons,
       caution: response.caution,
       recommendation: response.recommendation,
       caption: response.caption,
