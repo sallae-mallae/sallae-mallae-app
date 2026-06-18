@@ -15,10 +15,17 @@ class AnalysisResultView extends StatelessWidget {
     super.key,
     required this.result,
     required this.onClose,
+    this.topPadding = AppSpacing.topBarHeight + AppSpacing.xs,
+    this.closeLabel = '다시 촬영하기',
   });
 
   final AnalysisResult result;
   final VoidCallback onClose;
+
+  /// Space reserved above the content. Defaults to leaving room for the camera
+  /// top bar when shown as a full overlay; pass a small value in a sheet.
+  final double topPadding;
+  final String closeLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -32,9 +39,7 @@ class AnalysisResultView extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: EdgeInsets.only(
-            top: AppSpacing.topBarHeight + AppSpacing.xs,
-          ),
+          padding: EdgeInsets.only(top: topPadding),
           child: SingleChildScrollView(
             padding: AppSpacing.screen.add(
               const EdgeInsets.only(bottom: AppSpacing.xl),
@@ -110,7 +115,7 @@ class AnalysisResultView extends StatelessWidget {
                   const _RagBadge(),
                 ],
                 const SizedBox(height: AppSpacing.lg),
-                _CloseButton(onClose: onClose),
+                _CloseButton(onClose: onClose, label: closeLabel),
               ],
             ),
           ),
@@ -276,9 +281,10 @@ class _RagBadge extends StatelessWidget {
 }
 
 class _CloseButton extends StatelessWidget {
-  const _CloseButton({required this.onClose});
+  const _CloseButton({required this.onClose, required this.label});
 
   final VoidCallback onClose;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -293,9 +299,9 @@ class _CloseButton extends StatelessWidget {
           side: const BorderSide(color: AppColors.border),
         ),
       ),
-      child: const Text(
-        '다시 촬영하기',
-        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
       ),
     );
   }

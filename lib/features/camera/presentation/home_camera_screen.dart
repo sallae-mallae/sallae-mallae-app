@@ -7,9 +7,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/router/route_paths.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../features/analysis/domain/entities/analysis_result.dart';
-import '../../../features/analysis/presentation/widgets/analysis_loading_view.dart';
+import '../../../features/analysis/presentation/widgets/analysis_chat_view.dart';
 import '../../../features/analysis/presentation/widgets/analysis_result_view.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/app_top_bar.dart';
@@ -45,6 +46,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   InputMode _selectedInputMode = InputMode.text;
   bool _isDrawerOpen = false;
   AppDrawerSection _section = AppDrawerSection.camera;
+  final List<ChatMessage> _messages = <ChatMessage>[];
 
   @override
   void initState() {
@@ -115,9 +117,9 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
       }
 
       if (next.status == AnalysisStatus.success && next.result != null) {
-        _speakResult(next.result!);
+        _onAnalysisSuccess(next.result!);
       } else if (next.status == AnalysisStatus.failure) {
-        _showFailure(next.errorMessage);
+        _onAnalysisFailure(next.errorMessage);
       }
     });
 
@@ -201,7 +203,8 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
                             .toggleListening(),
                         onSubmit: _submitQuestion,
                         onTapCameraArea: _handleCameraAreaTap,
-                        onCloseResult: _closeResult,
+                        messages: List<ChatMessage>.of(_messages),
+                        onShowDetail: _showResultDetail,
                         buildCameraLayer: _buildCameraLayer,
                       ),
               ),
@@ -327,6 +330,10 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
       return;
     }
 
+    setState(() => _messages.add(ChatMessage.user(question)));
+    _questionController.clear();
+    ref.read(speechInputProvider.notifier).updateQuestionText('');
+
     await ref.read(speechInputProvider.notifier).cancelListening();
 
     final imageFile = await ref
@@ -376,87 +383,39 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     unawaited(_voiceNotifier.speakAiResponse(segments.join('. ')));
   }
 
-  void _showFailure(String? message) {
-    if (message == null || message.isEmpty || !mounted) {
-      return;
-    }
+  void _onAnalysisSuccess(AnalysisResult result) {
+    _speakResult(result);
 
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    final summary = result.verdictLabel.trim().isEmpty
+        ? '판단을 마쳤어요.'
+        : result.verdictLabel.trim();
+    setState(() => _messages.add(ChatMessage.ai(summary, result: result)));
   }
 
-  void _closeResult() {
-    unawaited(_voiceNotifier.stop());
-    ref.read(analysisProvider.notifier).reset();
-  }
-}
-
-/// Keeps the analysis loading overlay visible for a minimum duration so it
-/// does not flash and vanish when the request resolves very quickly.
-class _AnalysisLoadingGate extends StatefulWidget {
-  const _AnalysisLoadingGate({required this.isLoading});
-
-  final bool isLoading;
-
-  @override
-  State<_AnalysisLoadingGate> createState() => _AnalysisLoadingGateState();
-}
-
-class _AnalysisLoadingGateState extends State<_AnalysisLoadingGate> {
-  static const _minVisible = Duration(milliseconds: 1200);
-
-  bool _visible = false;
-  DateTime? _shownAt;
-  Timer? _hideTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _visible = widget.isLoading;
-    if (_visible) {
-      _shownAt = DateTime.now();
-    }
+  void _onAnalysisFailure(String? message) {
+    final text = (message == null || message.isEmpty)
+        ? '분석 결과를 가져오지 못했어요. 잠시 후 다시 시도해주세요.'
+        : message;
+    setState(() => _messages.add(ChatMessage.ai(text)));
   }
 
-  @override
-  void didUpdateWidget(covariant _AnalysisLoadingGate oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    if (widget.isLoading && !oldWidget.isLoading) {
-      _hideTimer?.cancel();
-      _shownAt = DateTime.now();
-      setState(() => _visible = true);
-    } else if (!widget.isLoading && oldWidget.isLoading) {
-      final elapsed = _shownAt == null
-          ? _minVisible
-          : DateTime.now().difference(_shownAt!);
-      final remaining = _minVisible - elapsed;
-
-      if (remaining <= Duration.zero) {
-        setState(() => _visible = false);
-      } else {
-        _hideTimer?.cancel();
-        _hideTimer = Timer(remaining, () {
-          if (mounted) {
-            setState(() => _visible = false);
-          }
-        });
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _hideTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 200),
-      child: _visible ? const AnalysisLoadingView() : const SizedBox.shrink(),
+  void _showResultDetail(AnalysisResult result) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => FractionallySizedBox(
+        heightFactor: 0.88,
+        child: ClipRRect(
+          borderRadius: AppRadius.sheet,
+          child: AnalysisResultView(
+            result: result,
+            onClose: () => Navigator.of(sheetContext).pop(),
+            topPadding: AppSpacing.lg,
+            closeLabel: '닫기',
+          ),
+        ),
+      ),
     );
   }
 }
@@ -521,7 +480,8 @@ class _HomeCameraBody extends StatelessWidget {
     required this.onSubmit,
     required this.buildCameraLayer,
     required this.onTapCameraArea,
-    required this.onCloseResult,
+    required this.messages,
+    required this.onShowDetail,
     super.key,
   });
 
@@ -537,7 +497,8 @@ class _HomeCameraBody extends StatelessWidget {
   final VoidCallback onToggleListening;
   final VoidCallback onSubmit;
   final VoidCallback onTapCameraArea;
-  final VoidCallback onCloseResult;
+  final List<ChatMessage> messages;
+  final ValueChanged<AnalysisResult> onShowDetail;
   final Widget Function(CameraState, CameraController?) buildCameraLayer;
 
   @override
@@ -568,12 +529,16 @@ class _HomeCameraBody extends StatelessWidget {
                   bottom: AppSpacing.figmaInputPanelHeight,
                   child: CameraVisionOverlay(state: visionOverlayState),
                 ),
-              if (analysisState.status == AnalysisStatus.success &&
-                  analysisState.result != null)
-                Positioned.fill(
-                  child: AnalysisResultView(
-                    result: analysisState.result!,
-                    onClose: onCloseResult,
+              if (messages.isNotEmpty || analysisState.isLoading)
+                Positioned(
+                  top: AppSpacing.topBarHeight,
+                  left: 0,
+                  right: 0,
+                  bottom: AppSpacing.figmaInputPanelHeight,
+                  child: AnalysisChatView(
+                    messages: messages,
+                    isThinking: analysisState.isLoading,
+                    onShowDetail: onShowDetail,
                   ),
                 ),
               Positioned(
@@ -582,27 +547,23 @@ class _HomeCameraBody extends StatelessWidget {
                 right: 0,
                 child: AppTopBar(onMenuPressed: onMenuPressed),
               ),
-              Positioned.fill(
-                child: _AnalysisLoadingGate(isLoading: analysisState.isLoading),
-              ),
-              if (analysisState.status != AnalysisStatus.success)
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.viewInsetsOf(context).bottom,
-                    ),
-                    child: BottomInputBar(
-                      controller: questionController,
-                      speechState: speechInputState,
-                      analysisState: analysisState,
-                      selectedMode: selectedInputMode,
-                      onModeSelected: onModeSelected,
-                      onToggleListening: onToggleListening,
-                      onSubmit: onSubmit,
-                    ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.viewInsetsOf(context).bottom,
+                  ),
+                  child: BottomInputBar(
+                    controller: questionController,
+                    speechState: speechInputState,
+                    analysisState: analysisState,
+                    selectedMode: selectedInputMode,
+                    onModeSelected: onModeSelected,
+                    onToggleListening: onToggleListening,
+                    onSubmit: onSubmit,
                   ),
                 ),
+              ),
             ],
           ),
         ),
