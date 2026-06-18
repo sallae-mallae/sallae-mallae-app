@@ -36,6 +36,9 @@ class AuthInterceptor extends Interceptor {
     ErrorInterceptorHandler handler,
   ) async {
     if (err.response?.statusCode == 401) {
+      // The stored token is no longer valid — drop it so later requests are
+      // unauthenticated and the app falls back to a guest session.
+      await _tokenStorage.clear();
       await onUnauthorized?.call();
     }
 

@@ -1,41 +1,32 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/assets/app_assets.dart';
-import '../../app/router/route_paths.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_radius.dart';
+import '../../features/auth/application/auth_provider.dart';
 import 'auth_text_field.dart';
 import 'primary_action_button.dart';
+import 'signup_bottom_sheet.dart';
 
-/// Presents the email/password login bottom sheet.
-///
-/// This is a presentation-only shell: submitting does not perform any
-/// authentication yet. The real sign-in flow is wired up in a later step.
+/// Presents the email/password login bottom sheet wired to the real auth API.
 Future<void> showLoginBottomSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (sheetContext) => _LoginBottomSheet(
-      onSignup: () {
-        Navigator.of(sheetContext).pop();
-        context.push(RoutePaths.signup);
-      },
-    ),
+    builder: (sheetContext) => const _LoginBottomSheet(),
   );
 }
 
-class _LoginBottomSheet extends StatefulWidget {
-  const _LoginBottomSheet({required this.onSignup});
-
-  final VoidCallback onSignup;
+class _LoginBottomSheet extends ConsumerStatefulWidget {
+  const _LoginBottomSheet();
 
   @override
-  State<_LoginBottomSheet> createState() => _LoginBottomSheetState();
+  ConsumerState<_LoginBottomSheet> createState() => _LoginBottomSheetState();
 }
 
-class _LoginBottomSheetState extends State<_LoginBottomSheet> {
+class _LoginBottomSheetState extends ConsumerState<_LoginBottomSheet> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
 
@@ -46,9 +37,37 @@ class _LoginBottomSheetState extends State<_LoginBottomSheet> {
     super.dispose();
   }
 
+  Future<void> _onLogin() async {
+    FocusScope.of(context).unfocus();
+    await ref
+        .read(authProvider.notifier)
+        .signIn(email: _email.text.trim(), password: _password.text);
+
+    if (!mounted) {
+      return;
+    }
+
+    if (ref.read(authProvider).hasError) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('로그인에 실패했어요. 정보를 확인해 주세요.')),
+        );
+      return;
+    }
+
+    Navigator.of(context).pop();
+  }
+
+  void _onSignup() {
+    Navigator.of(context).pop();
+    showSignupBottomSheet(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final isLoading = ref.watch(authProvider).isLoading;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -65,16 +84,7 @@ class _LoginBottomSheetState extends State<_LoginBottomSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Center(
-                  child: Container(
-                    width: 44,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: AppColors.border,
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                    ),
-                  ),
-                ),
+                const _SheetHandle(),
                 const SizedBox(height: 20),
                 Center(
                   child: Image.asset(
@@ -112,8 +122,8 @@ class _LoginBottomSheetState extends State<_LoginBottomSheet> {
                 ),
                 const SizedBox(height: 22),
                 PrimaryActionButton(
-                  label: '로그인',
-                  onPressed: () => Navigator.of(context).pop(),
+                  label: isLoading ? '로그인 중...' : '로그인',
+                  onPressed: isLoading ? null : _onLogin,
                 ),
                 const SizedBox(height: 10),
                 Row(
@@ -128,7 +138,7 @@ class _LoginBottomSheetState extends State<_LoginBottomSheet> {
                       ),
                     ),
                     TextButton(
-                      onPressed: widget.onSignup,
+                      onPressed: isLoading ? null : _onSignup,
                       child: const Text(
                         '회원가입',
                         style: TextStyle(
@@ -143,6 +153,24 @@ class _LoginBottomSheetState extends State<_LoginBottomSheet> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetHandle extends StatelessWidget {
+  const _SheetHandle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 44,
+        height: 5,
+        decoration: BoxDecoration(
+          color: AppColors.border,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
         ),
       ),
     );

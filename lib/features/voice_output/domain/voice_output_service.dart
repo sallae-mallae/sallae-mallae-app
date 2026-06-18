@@ -1,5 +1,7 @@
 import 'package:flutter_tts/flutter_tts.dart';
 
+import '../data/models/tts_voice.dart';
+
 class VoiceOutputService {
   VoiceOutputService({FlutterTts? flutterTts})
     : _flutterTts = flutterTts ?? FlutterTts();
@@ -22,6 +24,28 @@ class VoiceOutputService {
     await _flutterTts.setPitch(1.0);
     await _flutterTts.setVolume(1.0);
     await _flutterTts.awaitSpeakCompletion(true);
+  }
+
+  /// Korean voices available on the device.
+  Future<List<TtsVoice>> getKoreanVoices() async {
+    final raw = await _flutterTts.getVoices;
+    if (raw is! List) {
+      return const [];
+    }
+
+    return raw
+        .whereType<Map>()
+        .map(TtsVoice.fromMap)
+        .where(
+          (voice) =>
+              voice.name.isNotEmpty &&
+              voice.locale.toLowerCase().startsWith('ko'),
+        )
+        .toList();
+  }
+
+  Future<void> setVoice(TtsVoice voice) async {
+    await _flutterTts.setVoice(voice.toTtsMap());
   }
 
   Future<void> speak(String text) async {

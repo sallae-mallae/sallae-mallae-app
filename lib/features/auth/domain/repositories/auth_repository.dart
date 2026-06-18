@@ -9,6 +9,12 @@ abstract interface class AuthRepository {
   /// Restores a previously persisted session, or a guest session if none.
   Future<AuthSession> restoreSession();
 
+  Future<AuthSession> signUp({
+    required String email,
+    required String password,
+    required String nickname,
+  });
+
   Future<AuthSession> signIn({required String email, required String password});
 
   Future<void> signOut();
