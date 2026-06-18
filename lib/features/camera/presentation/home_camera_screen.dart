@@ -365,7 +365,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     if (analysisResult.status == AnalysisStatus.success &&
         analysisResult.result != null) {
       final isAuthenticated =
-          ref.read(authProvider).valueOrNull?.isAuthenticated ?? false;
+          ref.read(authProvider).asData?.value.isAuthenticated ?? false;
 
       if (isAuthenticated) {
         // The server already saved this analysis; refresh the server list.

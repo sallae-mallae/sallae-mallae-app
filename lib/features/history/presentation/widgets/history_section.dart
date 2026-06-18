@@ -12,7 +12,7 @@ class HistorySection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isAuthenticated =
-        ref.watch(authProvider).valueOrNull?.isAuthenticated ?? false;
+        ref.watch(authProvider).asData?.value.isAuthenticated ?? false;
 
     return isAuthenticated
         ? const ServerHistoryView()
