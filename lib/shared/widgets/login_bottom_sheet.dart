@@ -29,6 +29,7 @@ class _LoginBottomSheet extends ConsumerStatefulWidget {
 class _LoginBottomSheetState extends ConsumerState<_LoginBottomSheet> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -39,6 +40,8 @@ class _LoginBottomSheetState extends ConsumerState<_LoginBottomSheet> {
 
   Future<void> _onLogin() async {
     FocusScope.of(context).unfocus();
+    setState(() => _errorMessage = null);
+
     await ref
         .read(authProvider.notifier)
         .signIn(email: _email.text.trim(), password: _password.text);
@@ -48,11 +51,7 @@ class _LoginBottomSheetState extends ConsumerState<_LoginBottomSheet> {
     }
 
     if (ref.read(authProvider).hasError) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text('로그인에 실패했어요. 정보를 확인해 주세요.')),
-        );
+      setState(() => _errorMessage = '로그인에 실패했어요. 이메일과 비밀번호를 확인해 주세요.');
       return;
     }
 
@@ -120,6 +119,17 @@ class _LoginBottomSheetState extends ConsumerState<_LoginBottomSheet> {
                   hintText: '비밀번호를 입력해 주세요.',
                   obscureText: true,
                 ),
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    _errorMessage!,
+                    style: const TextStyle(
+                      color: AppColors.pass,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 22),
                 PrimaryActionButton(
                   label: isLoading ? '로그인 중...' : '로그인',
