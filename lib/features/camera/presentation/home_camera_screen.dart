@@ -52,6 +52,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   AppDrawerSection _section = AppDrawerSection.camera;
   final List<ChatMessage> _messages = <ChatMessage>[];
   String _lastQuestion = '';
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -282,7 +283,13 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
 
   void _openProfile() {
     _closeDrawer();
-    context.push(RoutePaths.myPage);
+    final isAuthenticated =
+        ref.read(authProvider).asData?.value.isAuthenticated ?? false;
+    if (isAuthenticated) {
+      context.push(RoutePaths.myPage);
+    } else {
+      showLoginBottomSheet(context);
+    }
   }
 
   Widget _buildCameraLayer(
@@ -343,7 +350,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   }
 
   Future<void> _submitQuestion() async {
-    if (ref.read(analysisProvider).isLoading) {
+    if (_isSubmitting || ref.read(analysisProvider).isLoading) {
       return;
     }
 
@@ -364,58 +371,69 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
 
   /// Re-runs the last question without adding a new chat bubble.
   Future<void> _retryAnalysis() async {
-    if (ref.read(analysisProvider).isLoading || _lastQuestion.isEmpty) {
+    if (_isSubmitting || _lastQuestion.isEmpty) {
       return;
     }
     await _runAnalysis(_lastQuestion);
   }
 
   Future<void> _runAnalysis(String question) async {
-    final analysisNotifier = ref.read(analysisProvider.notifier);
-
-    await ref.read(speechInputProvider.notifier).cancelListening();
-
-    final imageFile = await ref
-        .read(cameraProvider.notifier)
-        .captureRepresentativeImage();
-
-    if (imageFile == null) {
-      analysisNotifier.failWithMessage('분석할 이미지를 촬영할 수 없습니다.');
+    // Guard against overlapping runs (e.g. repeated voice keywords) so the
+    // camera is not asked to capture several times at once.
+    if (_isSubmitting) {
       return;
     }
+    _isSubmitting = true;
 
-    final visionContext = ref.read(visionProvider);
-    final settings = ref.read(appSettingsProvider);
+    final analysisNotifier = ref.read(analysisProvider.notifier);
 
-    await analysisNotifier.analyzeProduct(
-      imageFile: imageFile,
-      question: question,
-      visionContext: visionContext,
-      saveImage: settings.photoServerSave,
-      aiModel: settings.aiModel.isEmpty ? null : settings.aiModel,
-    );
+    try {
+      await ref.read(speechInputProvider.notifier).cancelListening();
 
-    final analysisResult = ref.read(analysisProvider);
-    if (analysisResult.status == AnalysisStatus.success &&
-        analysisResult.result != null) {
-      final isAuthenticated =
-          ref.read(authProvider).asData?.value.isAuthenticated ?? false;
+      final imageFile = await ref
+          .read(cameraProvider.notifier)
+          .captureRepresentativeImage();
 
-      if (isAuthenticated) {
-        // The server already saved this analysis; refresh the server list.
-        ref.invalidate(serverHistoryProvider);
-      } else {
-        await ref
-            .read(historyProvider.notifier)
-            .add(
-              HistoryItem.fromResult(
-                result: analysisResult.result!,
-                question: question,
-                imagePath: imageFile.path,
-                visionContext: visionContext,
-              ),
-            );
+      if (imageFile == null) {
+        analysisNotifier.failWithMessage('분석할 이미지를 촬영할 수 없습니다.');
+        return;
       }
+
+      final visionContext = ref.read(visionProvider);
+      final settings = ref.read(appSettingsProvider);
+
+      await analysisNotifier.analyzeProduct(
+        imageFile: imageFile,
+        question: question,
+        visionContext: visionContext,
+        saveImage: settings.photoServerSave,
+        aiModel: settings.aiModel.isEmpty ? null : settings.aiModel,
+      );
+
+      final analysisResult = ref.read(analysisProvider);
+      if (analysisResult.status == AnalysisStatus.success &&
+          analysisResult.result != null) {
+        final isAuthenticated =
+            ref.read(authProvider).asData?.value.isAuthenticated ?? false;
+
+        if (isAuthenticated) {
+          // The server already saved this analysis; refresh the server list.
+          ref.invalidate(serverHistoryProvider);
+        } else {
+          await ref
+              .read(historyProvider.notifier)
+              .add(
+                HistoryItem.fromResult(
+                  result: analysisResult.result!,
+                  question: question,
+                  imagePath: imageFile.path,
+                  visionContext: visionContext,
+                ),
+              );
+        }
+      }
+    } finally {
+      _isSubmitting = false;
     }
   }
 
@@ -436,10 +454,13 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   void _onAnalysisSuccess(AnalysisResult result) {
     _speakResult(result);
 
-    final summary = result.verdictLabel.trim().isEmpty
-        ? '판단을 마쳤어요.'
-        : result.verdictLabel.trim();
-    setState(() => _messages.add(ChatMessage.ai(summary, result: result)));
+    // Show the same text the TTS reads (verdict + recommendation) in the chat.
+    final parts = [
+      result.verdictLabel.trim(),
+      result.recommendation.trim(),
+    ].where((part) => part.isNotEmpty).toList();
+    final text = parts.isEmpty ? '판단을 마쳤어요.' : parts.join('\n\n');
+    setState(() => _messages.add(ChatMessage.ai(text, result: result)));
   }
 
   void _onAnalysisFailure(String? message) {
