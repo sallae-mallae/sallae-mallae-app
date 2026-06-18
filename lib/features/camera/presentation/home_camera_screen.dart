@@ -12,6 +12,7 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../features/analysis/domain/entities/analysis_result.dart';
 import '../../../features/analysis/presentation/widgets/analysis_chat_view.dart';
 import '../../../features/analysis/presentation/widgets/analysis_result_view.dart';
+import '../../../shared/widgets/account_bottom_sheet.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../shared/widgets/bottom_input_bar.dart';
@@ -53,6 +54,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   final List<ChatMessage> _messages = <ChatMessage>[];
   String _lastQuestion = '';
   bool _isSubmitting = false;
+  bool _isCapturing = false;
 
   @override
   void initState() {
@@ -231,6 +233,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
                         messages: List<ChatMessage>.of(_messages),
                         onShowDetail: _showResultDetail,
                         onRetry: _retryAnalysis,
+                        isCapturing: _isCapturing,
                         buildCameraLayer: _buildCameraLayer,
                       ),
               ),
@@ -286,7 +289,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     final isAuthenticated =
         ref.read(authProvider).asData?.value.isAuthenticated ?? false;
     if (isAuthenticated) {
-      context.push(RoutePaths.myPage);
+      showAccountBottomSheet(context);
     } else {
       showLoginBottomSheet(context);
     }
@@ -390,9 +393,16 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     try {
       await ref.read(speechInputProvider.notifier).cancelListening();
 
+      // Briefly hide the chat so the shot is captured against a clean frame.
+      if (mounted) {
+        setState(() => _isCapturing = true);
+      }
       final imageFile = await ref
           .read(cameraProvider.notifier)
           .captureRepresentativeImage();
+      if (mounted) {
+        setState(() => _isCapturing = false);
+      }
 
       if (imageFile == null) {
         analysisNotifier.failWithMessage('분석할 이미지를 촬영할 수 없습니다.');
@@ -554,6 +564,7 @@ class _HomeCameraBody extends StatelessWidget {
     required this.messages,
     required this.onShowDetail,
     required this.onRetry,
+    required this.isCapturing,
     super.key,
   });
 
@@ -572,6 +583,7 @@ class _HomeCameraBody extends StatelessWidget {
   final List<ChatMessage> messages;
   final ValueChanged<AnalysisResult> onShowDetail;
   final VoidCallback onRetry;
+  final bool isCapturing;
   final Widget Function(CameraState, CameraController?) buildCameraLayer;
 
   @override
@@ -608,11 +620,17 @@ class _HomeCameraBody extends StatelessWidget {
                   left: 0,
                   right: 0,
                   bottom: AppSpacing.figmaInputPanelHeight,
-                  child: AnalysisChatView(
-                    messages: messages,
-                    isThinking: analysisState.isLoading,
-                    onShowDetail: onShowDetail,
-                    onRetry: onRetry,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 220),
+                    // Fade the chat away while the photo is being captured, then
+                    // bring it back once analysis starts.
+                    opacity: isCapturing ? 0 : 1,
+                    child: AnalysisChatView(
+                      messages: messages,
+                      isThinking: analysisState.isLoading,
+                      onShowDetail: onShowDetail,
+                      onRetry: onRetry,
+                    ),
                   ),
                 ),
               Positioned(
