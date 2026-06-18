@@ -6,7 +6,7 @@ import 'package:sallae_mallae_app/core/network/network_interceptor.dart';
 import 'api_constants.dart';
 
 abstract final class DioClient {
-  static Dio create() {
+  static Dio create({Future<void> Function()? onUnauthorized}) {
     final dio = Dio(
       BaseOptions(
         baseUrl: ApiConstants.baseUrl,
@@ -20,7 +20,7 @@ abstract final class DioClient {
       ),
     );
 
-    dio.interceptors.add(AuthInterceptor());
+    dio.interceptors.add(AuthInterceptor(onUnauthorized: onUnauthorized));
     dio.interceptors.add(NetworkInterceptor());
     dio.interceptors.add(LoggingInterceptor());
 
