@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../features/analysis/domain/entities/analysis_result.dart';
 import '../../../features/analysis/presentation/widgets/analysis_chat_view.dart';
 import '../../../features/analysis/presentation/widgets/analysis_result_view.dart';
+import '../../../shared/purchase_intent.dart';
 import '../../../shared/widgets/account_bottom_sheet.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/app_top_bar.dart';
@@ -375,7 +377,11 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     ref.read(speechInputProvider.notifier).updateQuestionText('');
 
     _lastQuestion = question;
-    await _runAnalysis(question);
+    // Only take a fresh photo when the user actually asks for a new verdict
+    // (a purchase-intent phrase) or when we have no previous photo. Otherwise
+    // reuse the last photo and just send the updated question.
+    final captureNew = _lastImagePath == null || hasPurchaseIntent(question);
+    await _runAnalysis(question, captureNewImage: captureNew);
   }
 
   /// Re-runs the last question without adding a new chat bubble.
@@ -383,10 +389,14 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     if (_isSubmitting || _lastQuestion.isEmpty) {
       return;
     }
-    await _runAnalysis(_lastQuestion);
+    // Retry against the same photo when one is available.
+    await _runAnalysis(_lastQuestion, captureNewImage: _lastImagePath == null);
   }
 
-  Future<void> _runAnalysis(String question) async {
+  Future<void> _runAnalysis(
+    String question, {
+    required bool captureNewImage,
+  }) async {
     // Guard against overlapping runs (e.g. repeated voice keywords) so the
     // camera is not asked to capture several times at once.
     if (_isSubmitting) {
@@ -399,9 +409,17 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     try {
       await ref.read(speechInputProvider.notifier).cancelListening();
 
-      final imageFile = await ref
-          .read(cameraProvider.notifier)
-          .captureRepresentativeImage();
+      // Reuse the previous photo when the question has no purchase intent and
+      // the cached file still exists; otherwise capture a fresh one.
+      final cachedPath = _lastImagePath;
+      final XFile? imageFile =
+          (!captureNewImage &&
+              cachedPath != null &&
+              File(cachedPath).existsSync())
+          ? XFile(cachedPath)
+          : await ref
+                .read(cameraProvider.notifier)
+                .captureRepresentativeImage();
 
       if (imageFile == null) {
         analysisNotifier.failWithMessage('분석할 이미지를 촬영할 수 없습니다.');
