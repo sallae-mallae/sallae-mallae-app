@@ -32,16 +32,19 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
 
-flutter_launcher_icons:
-  ios: true
-  android: true
-  remove_alpha_ios: true
-  image_path_ios: assets/icon/ios_salmal_last.png
-  image_path_android: assets/icon/android_salmal_last.png
-
 flutter:
   uses-material-design: true
 
   assets:
     - .env
     - assets/
+
+# Run `dart run flutter_launcher_icons` after `flutter pub get` to generate
+# the native iOS/Android launcher icons from these sources.
+flutter_launcher_icons:
+  ios: true
+  image_path_ios: "assets/ios_salmal_last.png"
+  remove_alpha_ios: true
+  background_color_ios: "#FFFFFF"
+  android: true
+  image_path_android: "assets/android_salmal_last.png"
