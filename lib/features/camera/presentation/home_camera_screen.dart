@@ -23,6 +23,7 @@ import '../../analysis/application/analysis_provider.dart';
 import '../../analysis/application/analysis_state.dart';
 import '../../auth/application/auth_provider.dart';
 import '../../chat/application/chat_rooms_provider.dart';
+import '../../chat/domain/chat_verdict_parser.dart';
 import '../../chat/domain/entities/chat_room.dart';
 import '../../history/application/history_provider.dart';
 import '../../history/application/server_history_provider.dart';
@@ -329,7 +330,10 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
             detail.messages.map(
               (m) => m.isUser
                   ? ChatMessage.user(m.content)
-                  : ChatMessage.ai(m.content),
+                  : ChatMessage.ai(
+                      m.content,
+                      result: analysisResultFromContent(m.content),
+                    ),
             ),
           );
       });
@@ -701,7 +705,12 @@ class _HomeCameraBody extends StatelessWidget {
                   top: AppSpacing.topBarHeight,
                   left: 0,
                   right: 0,
-                  bottom: AppSpacing.figmaInputPanelHeight + keyboardInset,
+                  // Leave a small gap so the last bubble doesn't touch the
+                  // input panel.
+                  bottom:
+                      AppSpacing.figmaInputPanelHeight +
+                      keyboardInset +
+                      AppSpacing.md,
                   child: AnimatedOpacity(
                     duration: const Duration(milliseconds: 220),
                     // Hide the chat while the camera is detecting an object so
