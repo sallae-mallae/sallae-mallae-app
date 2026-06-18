@@ -115,6 +115,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                         const _RowDivider(),
                         _SettingsRow(
+                          label: 'Pro Mode',
+                          trailing: Switch.adaptive(
+                            value: settings.proMode,
+                            activeColor: AppColors.primary,
+                            onChanged: settingsNotifier.setProMode,
+                          ),
+                        ),
+                        const _RowDivider(),
+                        _SettingsRow(
                           label: 'TTS 음성',
                           trailing: _VoiceDropdown(
                             voices: voiceState.availableVoices,

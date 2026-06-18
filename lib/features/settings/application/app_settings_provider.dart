@@ -11,6 +11,7 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
   static const _inputModeKey = 'settings_input_mode';
   static const _voiceAutoSendKey = 'settings_voice_auto_send';
   static const _photoServerSaveKey = 'settings_photo_server_save';
+  static const _proModeKey = 'settings_pro_mode';
   static const _aiModelKey = 'settings_ai_model';
 
   @override
@@ -27,6 +28,7 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
           : AppInputMode.text,
       voiceAutoSend: prefs.getBool(_voiceAutoSendKey) ?? true,
       photoServerSave: prefs.getBool(_photoServerSaveKey) ?? false,
+      proMode: prefs.getBool(_proModeKey) ?? false,
       aiModel: prefs.getString(_aiModelKey) ?? '',
     );
   }
@@ -47,6 +49,12 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
     state = state.copyWith(photoServerSave: value);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_photoServerSaveKey, value);
+  }
+
+  Future<void> setProMode(bool value) async {
+    state = state.copyWith(proMode: value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_proModeKey, value);
   }
 
   Future<void> setAiModel(String value) async {
