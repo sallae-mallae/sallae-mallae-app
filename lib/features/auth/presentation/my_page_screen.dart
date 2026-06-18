@@ -6,6 +6,7 @@ import '../../../app/router/route_paths.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../shared/widgets/login_bottom_sheet.dart';
 import '../../../shared/widgets/primary_action_button.dart';
 import '../application/auth_provider.dart';
 import '../domain/entities/auth_session.dart';
@@ -234,7 +235,7 @@ class _GuestView extends StatelessWidget {
         const SizedBox(height: AppSpacing.lg),
         PrimaryActionButton(
           label: '로그인',
-          onPressed: () => context.push(RoutePaths.login),
+          onPressed: () => showLoginBottomSheet(context),
         ),
       ],
     );
