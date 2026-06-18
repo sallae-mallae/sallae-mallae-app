@@ -101,15 +101,6 @@ class AnalysisResultView extends StatelessWidget {
                     body: result.recommendation,
                   ),
                 ],
-                if (result.caption.trim().isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  _ResultCard(
-                    icon: Icons.notes_rounded,
-                    accent: AppColors.textSecondary,
-                    title: '상세 설명',
-                    body: result.caption,
-                  ),
-                ],
                 if (result.ragUsed) ...[
                   const SizedBox(height: AppSpacing.md),
                   const _RagBadge(),

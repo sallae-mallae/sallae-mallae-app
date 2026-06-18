@@ -100,8 +100,6 @@ class HistoryDetailScreen extends StatelessWidget {
                         _DetailCard(title: '주의할 점', body: item.caution),
                       if (item.recommendation.trim().isNotEmpty)
                         _DetailCard(title: '추천', body: item.recommendation),
-                      if (item.caption.trim().isNotEmpty)
-                        _DetailCard(title: '상세 설명', body: item.caption),
                       if (item.ocrCandidates.isNotEmpty)
                         _DetailCard(
                           title: '인식된 텍스트',

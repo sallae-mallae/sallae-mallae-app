@@ -70,7 +70,10 @@ class ServerHistoryNotifier extends Notifier<ServerHistoryState> {
 
   @override
   ServerHistoryState build() {
-    _load(reset: true);
+    // Defer the first load until after build() returns; reading `state` inside
+    // _load before the provider is initialized throws an uninitialized-provider
+    // error.
+    Future.microtask(() => _load(reset: true));
     return const ServerHistoryState.initial();
   }
 
