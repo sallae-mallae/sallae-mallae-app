@@ -151,8 +151,12 @@ class SpeechInputNotifier extends Notifier<SpeechInputState> {
       return;
     }
 
+    // Only trigger once the utterance is finalized so we capture the full
+    // sentence (e.g. "살래~?") and submit the processed text, not an early
+    // partial that may cut off mid-word.
     final triggered =
-        state.autoSubmitTriggered || _hasAutoCaptureKeyword(recognizedWords);
+        state.autoSubmitTriggered ||
+        (result.finalResult && _hasAutoCaptureKeyword(recognizedWords));
 
     state = state.copyWith(
       questionText: recognizedWords,

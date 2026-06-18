@@ -11,6 +11,7 @@ class ChatMessage {
     required this.isUser,
     required this.text,
     this.result,
+    this.imagePath,
     this.isError = false,
   });
 
@@ -19,14 +20,24 @@ class ChatMessage {
   const ChatMessage.ai(
     String text, {
     AnalysisResult? result,
+    String? imagePath,
     bool isError = false,
-  }) : this._(isUser: false, text: text, result: result, isError: isError);
+  }) : this._(
+         isUser: false,
+         text: text,
+         result: result,
+         imagePath: imagePath,
+         isError: isError,
+       );
 
   final bool isUser;
   final String text;
 
   /// Present on an AI verdict message so the UI can offer a "자세히" detail view.
   final AnalysisResult? result;
+
+  /// Path of the captured photo for this verdict, shown in the detail view.
+  final String? imagePath;
 
   /// Set on an AI message that reports a failure, so the UI can offer a retry.
   final bool isError;
@@ -46,7 +57,7 @@ class AnalysisChatView extends StatefulWidget {
 
   final List<ChatMessage> messages;
   final bool isThinking;
-  final ValueChanged<AnalysisResult> onShowDetail;
+  final void Function(AnalysisResult result, String? imagePath) onShowDetail;
   final VoidCallback onRetry;
 
   @override
@@ -187,7 +198,7 @@ class _MessageBubble extends StatelessWidget {
   });
 
   final ChatMessage message;
-  final ValueChanged<AnalysisResult> onShowDetail;
+  final void Function(AnalysisResult result, String? imagePath) onShowDetail;
   final VoidCallback onRetry;
 
   @override
@@ -221,19 +232,46 @@ class _MessageBubble extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                message.text,
-                style: TextStyle(
-                  color: isUser ? AppColors.textInverse : AppColors.textPrimary,
-                  fontSize: 15,
-                  height: 1.4,
-                  fontWeight: FontWeight.w600,
+              if (!isUser && result != null) ...[
+                Text(
+                  result.verdictLabel.trim().isEmpty
+                      ? '판단을 마쳤어요.'
+                      : result.verdictLabel.trim(),
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    height: 1.3,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
+                if (result.recommendation.trim().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    result.recommendation.trim(),
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      height: 1.4,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ] else
+                Text(
+                  message.text,
+                  style: TextStyle(
+                    color: isUser
+                        ? AppColors.textInverse
+                        : AppColors.textPrimary,
+                    fontSize: 15,
+                    height: 1.4,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               if (result != null) ...[
                 const SizedBox(height: AppSpacing.xs),
                 GestureDetector(
-                  onTap: () => onShowDetail(result),
+                  onTap: () => onShowDetail(result, message.imagePath),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: const [

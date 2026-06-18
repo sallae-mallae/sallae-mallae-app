@@ -12,6 +12,7 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../features/analysis/domain/entities/analysis_result.dart';
 import '../../../features/analysis/presentation/widgets/analysis_chat_view.dart';
 import '../../../features/analysis/presentation/widgets/analysis_result_view.dart';
+import '../../../shared/widgets/account_bottom_sheet.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/app_top_bar.dart';
 import '../../../shared/widgets/bottom_input_bar.dart';
@@ -52,6 +53,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   AppDrawerSection _section = AppDrawerSection.camera;
   final List<ChatMessage> _messages = <ChatMessage>[];
   String _lastQuestion = '';
+  String? _lastImagePath;
   bool _isSubmitting = false;
 
   @override
@@ -141,7 +143,10 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
               content: const Text('세션이 만료되었어요. 다시 로그인해 주세요.'),
               action: SnackBarAction(
                 label: '로그인',
-                onPressed: () => showLoginBottomSheet(context),
+                onPressed: () {
+                  unawaited(_speechNotifier.cancelListening());
+                  showLoginBottomSheet(context);
+                },
               ),
             ),
           );
@@ -231,6 +236,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
                         messages: List<ChatMessage>.of(_messages),
                         onShowDetail: _showResultDetail,
                         onRetry: _retryAnalysis,
+                        isDetecting: visionOverlayState.hasProducts,
                         buildCameraLayer: _buildCameraLayer,
                       ),
               ),
@@ -283,10 +289,13 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
 
   void _openProfile() {
     _closeDrawer();
+    // Stop voice recognition so it doesn't keep producing text while the
+    // login/account sheet is open.
+    unawaited(_speechNotifier.cancelListening());
     final isAuthenticated =
         ref.read(authProvider).asData?.value.isAuthenticated ?? false;
     if (isAuthenticated) {
-      context.push(RoutePaths.myPage);
+      showAccountBottomSheet(context);
     } else {
       showLoginBottomSheet(context);
     }
@@ -399,6 +408,8 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
         return;
       }
 
+      _lastImagePath = imageFile.path;
+
       final visionContext = ref.read(visionProvider);
       final settings = ref.read(appSettingsProvider);
 
@@ -460,7 +471,11 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
       result.recommendation.trim(),
     ].where((part) => part.isNotEmpty).toList();
     final text = parts.isEmpty ? '판단을 마쳤어요.' : parts.join('\n\n');
-    setState(() => _messages.add(ChatMessage.ai(text, result: result)));
+    setState(
+      () => _messages.add(
+        ChatMessage.ai(text, result: result, imagePath: _lastImagePath),
+      ),
+    );
   }
 
   void _onAnalysisFailure(String? message) {
@@ -470,7 +485,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     setState(() => _messages.add(ChatMessage.ai(text, isError: true)));
   }
 
-  void _showResultDetail(AnalysisResult result) {
+  void _showResultDetail(AnalysisResult result, String? imagePath) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -481,6 +496,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
           borderRadius: AppRadius.sheet,
           child: AnalysisResultView(
             result: result,
+            imagePath: imagePath,
             onClose: () => Navigator.of(sheetContext).pop(),
             topPadding: AppSpacing.lg,
             closeLabel: '닫기',
@@ -554,6 +570,7 @@ class _HomeCameraBody extends StatelessWidget {
     required this.messages,
     required this.onShowDetail,
     required this.onRetry,
+    required this.isDetecting,
     super.key,
   });
 
@@ -570,12 +587,14 @@ class _HomeCameraBody extends StatelessWidget {
   final VoidCallback onSubmit;
   final VoidCallback onTapCameraArea;
   final List<ChatMessage> messages;
-  final ValueChanged<AnalysisResult> onShowDetail;
+  final void Function(AnalysisResult result, String? imagePath) onShowDetail;
   final VoidCallback onRetry;
+  final bool isDetecting;
   final Widget Function(CameraState, CameraController?) buildCameraLayer;
 
   @override
   Widget build(BuildContext context) {
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
     return GestureDetector(
       onTap: onTapCameraArea,
       child: DecoratedBox(
@@ -587,32 +606,43 @@ class _HomeCameraBody extends StatelessWidget {
           bottom: false,
           child: Stack(
             children: [
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: AppSpacing.figmaInputPanelHeight,
-                child: buildCameraLayer(cameraState, controller),
-              ),
+              Positioned.fill(child: buildCameraLayer(cameraState, controller)),
               if (cameraState.canShowPreview && controller != null)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: AppSpacing.figmaInputPanelHeight,
-                  child: CameraVisionOverlay(state: visionOverlayState),
+                Positioned.fill(
+                  // The overlay shares the full-screen camera coordinate space
+                  // so boxes stay aligned, but is clipped to the area above the
+                  // input panel so detection is only shown there.
+                  child: ClipRect(
+                    clipper: const _AboveInputPanelClipper(
+                      AppSpacing.figmaInputPanelHeight,
+                    ),
+                    child: CameraVisionOverlay(state: visionOverlayState),
+                  ),
                 ),
               if (messages.isNotEmpty || analysisState.isLoading)
                 Positioned(
                   top: AppSpacing.topBarHeight,
                   left: 0,
                   right: 0,
-                  bottom: AppSpacing.figmaInputPanelHeight,
-                  child: AnalysisChatView(
-                    messages: messages,
-                    isThinking: analysisState.isLoading,
-                    onShowDetail: onShowDetail,
-                    onRetry: onRetry,
+                  bottom: AppSpacing.figmaInputPanelHeight + keyboardInset,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 220),
+                    // Hide the chat while the camera is detecting an object so
+                    // the product/box is unobstructed; bring it back when there
+                    // is no detection. IgnorePointer + RepaintBoundary keep the
+                    // hidden chat from handling taps or repainting needlessly.
+                    opacity: isDetecting ? 0 : 1,
+                    child: IgnorePointer(
+                      ignoring: isDetecting,
+                      child: RepaintBoundary(
+                        child: AnalysisChatView(
+                          messages: messages,
+                          isThinking: analysisState.isLoading,
+                          onShowDetail: onShowDetail,
+                          onRetry: onRetry,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               Positioned(
@@ -644,6 +674,23 @@ class _HomeCameraBody extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Clips a full-screen overlay to the region above the bottom input panel.
+class _AboveInputPanelClipper extends CustomClipper<Rect> {
+  const _AboveInputPanelClipper(this.bottomInset);
+
+  final double bottomInset;
+
+  @override
+  Rect getClip(Size size) {
+    final height = (size.height - bottomInset).clamp(0.0, size.height);
+    return Rect.fromLTWH(0, 0, size.width, height);
+  }
+
+  @override
+  bool shouldReclip(_AboveInputPanelClipper oldClipper) =>
+      oldClipper.bottomInset != bottomInset;
 }
 
 class _CameraPreviewFill extends StatelessWidget {

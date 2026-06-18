@@ -5,5 +5,4 @@ abstract final class RoutePaths {
   static const history = '/history';
   static const historyDetail = '/history/detail';
   static const settings = '/settings';
-  static const myPage = '/my-page';
 }

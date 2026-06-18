@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_radius.dart';
+import '../../core/errors/app_exception.dart';
 import '../../features/auth/application/auth_provider.dart';
 import 'auth_text_field.dart';
 import 'primary_action_button.dart';
@@ -62,11 +63,32 @@ class _SignupBottomSheetState extends ConsumerState<_SignupBottomSheet> {
     }
 
     if (ref.read(authProvider).hasError) {
-      setState(() => _errorMessage = '가입에 실패했어요. 입력 정보를 확인해 주세요.');
+      setState(
+        () => _errorMessage = _signupErrorMessage(ref.read(authProvider).error),
+      );
       return;
     }
 
     Navigator.of(context).pop();
+  }
+
+  String _signupErrorMessage(Object? error) {
+    if (error is AppException) {
+      switch (error.type) {
+        case AppExceptionType.network:
+          return '서버에 연결할 수 없어요. 네트워크를 확인해 주세요.';
+        case AppExceptionType.timeout:
+          return '요청 시간이 초과됐어요. 다시 시도해 주세요.';
+        case AppExceptionType.badRequest:
+        case AppExceptionType.validation:
+          return '이미 가입된 이메일이거나 입력 정보가 올바르지 않아요.';
+        case AppExceptionType.server:
+          return '서버 오류예요. 잠시 후 다시 시도해 주세요.';
+        default:
+          return '가입에 실패했어요. 잠시 후 다시 시도해 주세요.';
+      }
+    }
+    return '가입에 실패했어요. 잠시 후 다시 시도해 주세요.';
   }
 
   @override

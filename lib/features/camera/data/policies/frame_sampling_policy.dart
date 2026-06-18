@@ -1,6 +1,9 @@
 class FrameSamplingPolicy {
   const FrameSamplingPolicy({
-    this.interval = const Duration(milliseconds: 500),
+    // Process at most ~1 frame/sec. Running detection/OCR/quality on every
+    // frame keeps the CPU/GPU busy and overheats the device; a wider interval
+    // keeps the live overlay responsive enough while cutting heat.
+    this.interval = const Duration(milliseconds: 1000),
   });
 
   final Duration interval;
