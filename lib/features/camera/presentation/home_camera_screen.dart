@@ -18,9 +18,11 @@ import '../../../shared/widgets/bottom_input_bar.dart';
 import '../../../shared/widgets/segmented_input_mode.dart';
 import '../../analysis/application/analysis_provider.dart';
 import '../../analysis/application/analysis_state.dart';
+import '../../auth/application/auth_provider.dart';
 import '../../history/application/history_provider.dart';
+import '../../history/application/server_history_provider.dart';
 import '../../history/domain/entities/history_item.dart';
-import '../../history/presentation/widgets/history_list_view.dart';
+import '../../history/presentation/widgets/history_section.dart';
 import '../../settings/application/app_settings_provider.dart';
 import '../../speech_input/data/models/speech_input_state.dart';
 import '../../speech_input/domain/speech_input_provider.dart';
@@ -362,16 +364,24 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     final analysisResult = ref.read(analysisProvider);
     if (analysisResult.status == AnalysisStatus.success &&
         analysisResult.result != null) {
-      await ref
-          .read(historyProvider.notifier)
-          .add(
-            HistoryItem.fromResult(
-              result: analysisResult.result!,
-              question: question,
-              imagePath: imageFile.path,
-              visionContext: visionContext,
-            ),
-          );
+      final isAuthenticated =
+          ref.read(authProvider).valueOrNull?.isAuthenticated ?? false;
+
+      if (isAuthenticated) {
+        // The server already saved this analysis; refresh the server list.
+        ref.invalidate(serverHistoryProvider);
+      } else {
+        await ref
+            .read(historyProvider.notifier)
+            .add(
+              HistoryItem.fromResult(
+                result: analysisResult.result!,
+                question: question,
+                imagePath: imageFile.path,
+                visionContext: visionContext,
+              ),
+            );
+      }
     }
   }
 
@@ -454,7 +464,7 @@ class _HistorySectionView extends StatelessWidget {
                   padding: const EdgeInsets.only(
                     top: AppSpacing.topBarHeight + 10,
                   ),
-                  child: const HistoryListView(),
+                  child: const HistorySection(),
                 ),
               ),
               Positioned(

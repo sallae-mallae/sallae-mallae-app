@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/router/route_paths.dart';
 import '../../../app/theme/app_colors.dart';
-import 'widgets/history_list_view.dart';
+import 'widgets/history_section.dart';
 
 class HistoryScreen extends StatelessWidget {
   const HistoryScreen({super.key});
@@ -52,7 +52,7 @@ class HistoryScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const Expanded(child: HistoryListView()),
+              const Expanded(child: HistorySection()),
             ],
           ),
         ),
