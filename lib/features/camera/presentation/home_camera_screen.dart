@@ -288,13 +288,43 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     _closeDrawer();
   }
 
-  void _openChatRoom(ChatRoom room) {
+  Future<void> _openChatRoom(ChatRoom room) async {
     // Bring the user back to the camera home where the chat thread lives, then
     // load the selected room's conversation.
     setState(() => _section = AppDrawerSection.camera);
     _closeDrawer();
-    // TODO: fetch and render this room's messages once the chat data API
-    // (GET chat room data) is available; for now we only navigate home.
+
+    try {
+      final detail = await ref
+          .read(chatRemoteDatasourceProvider)
+          .getSession(room.id);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _sessionId = detail.id;
+        _lastQuestion = '';
+        // Server sessions don't carry a local photo path; the server reuses the
+        // session's stored photo for follow-up questions.
+        _lastImagePath = null;
+        _messages
+          ..clear()
+          ..addAll(
+            detail.messages.map(
+              (m) => m.isUser
+                  ? ChatMessage.user(m.content)
+                  : ChatMessage.ai(m.content),
+            ),
+          );
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('대화를 불러오지 못했어요.')));
+    }
   }
 
   void _openSettings() {

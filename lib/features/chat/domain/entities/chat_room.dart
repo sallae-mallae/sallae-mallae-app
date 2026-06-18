@@ -7,7 +7,7 @@ class ChatRoom {
     required this.createdAt,
   });
 
-  final String id;
+  final int id;
 
   /// Short title shown in the drawer list (e.g. the first question).
   final String title;
