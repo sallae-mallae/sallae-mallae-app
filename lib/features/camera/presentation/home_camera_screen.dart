@@ -54,7 +54,6 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   final List<ChatMessage> _messages = <ChatMessage>[];
   String _lastQuestion = '';
   bool _isSubmitting = false;
-  bool _isCapturing = false;
 
   @override
   void initState() {
@@ -233,7 +232,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
                         messages: List<ChatMessage>.of(_messages),
                         onShowDetail: _showResultDetail,
                         onRetry: _retryAnalysis,
-                        isCapturing: _isCapturing,
+                        isDetecting: visionOverlayState.hasProducts,
                         buildCameraLayer: _buildCameraLayer,
                       ),
               ),
@@ -393,16 +392,9 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     try {
       await ref.read(speechInputProvider.notifier).cancelListening();
 
-      // Briefly hide the chat so the shot is captured against a clean frame.
-      if (mounted) {
-        setState(() => _isCapturing = true);
-      }
       final imageFile = await ref
           .read(cameraProvider.notifier)
           .captureRepresentativeImage();
-      if (mounted) {
-        setState(() => _isCapturing = false);
-      }
 
       if (imageFile == null) {
         analysisNotifier.failWithMessage('분석할 이미지를 촬영할 수 없습니다.');
@@ -564,7 +556,7 @@ class _HomeCameraBody extends StatelessWidget {
     required this.messages,
     required this.onShowDetail,
     required this.onRetry,
-    required this.isCapturing,
+    required this.isDetecting,
     super.key,
   });
 
@@ -583,7 +575,7 @@ class _HomeCameraBody extends StatelessWidget {
   final List<ChatMessage> messages;
   final ValueChanged<AnalysisResult> onShowDetail;
   final VoidCallback onRetry;
-  final bool isCapturing;
+  final bool isDetecting;
   final Widget Function(CameraState, CameraController?) buildCameraLayer;
 
   @override
@@ -622,14 +614,21 @@ class _HomeCameraBody extends StatelessWidget {
                   bottom: AppSpacing.figmaInputPanelHeight,
                   child: AnimatedOpacity(
                     duration: const Duration(milliseconds: 220),
-                    // Fade the chat away while the photo is being captured, then
-                    // bring it back once analysis starts.
-                    opacity: isCapturing ? 0 : 1,
-                    child: AnalysisChatView(
-                      messages: messages,
-                      isThinking: analysisState.isLoading,
-                      onShowDetail: onShowDetail,
-                      onRetry: onRetry,
+                    // Hide the chat while the camera is detecting an object so
+                    // the product/box is unobstructed; bring it back when there
+                    // is no detection. IgnorePointer + RepaintBoundary keep the
+                    // hidden chat from handling taps or repainting needlessly.
+                    opacity: isDetecting ? 0 : 1,
+                    child: IgnorePointer(
+                      ignoring: isDetecting,
+                      child: RepaintBoundary(
+                        child: AnalysisChatView(
+                          messages: messages,
+                          isThinking: analysisState.isLoading,
+                          onShowDetail: onShowDetail,
+                          onRetry: onRetry,
+                        ),
+                      ),
                     ),
                   ),
                 ),
