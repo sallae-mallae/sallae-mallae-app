@@ -9,7 +9,7 @@ import 'token_storage.dart';
 /// refresh API is wired up once authentication is finalized.
 class AuthInterceptor extends Interceptor {
   AuthInterceptor({TokenStorage? tokenStorage, this.onUnauthorized})
-    : _tokenStorage = tokenStorage ?? const LocalTokenStorage();
+    : _tokenStorage = tokenStorage ?? SecureTokenStorage();
 
   final TokenStorage _tokenStorage;
 

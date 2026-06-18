@@ -1,4 +1,4 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Contract for persisting the access token used to authorize requests.
 abstract interface class TokenStorage {
@@ -9,33 +9,23 @@ abstract interface class TokenStorage {
   Future<void> clear();
 }
 
-/// Scaffold implementation backed by [SharedPreferences].
-///
-/// NOTE: this stores the token in plain preferences and is only meant as a
-/// scaffold. Swap it for a secure storage implementation (e.g.
-/// flutter_secure_storage) before persisting real access tokens.
-class LocalTokenStorage implements TokenStorage {
-  const LocalTokenStorage();
+/// Access token kept in the platform secure storage (iOS Keychain / Android
+/// Keystore-backed).
+class SecureTokenStorage implements TokenStorage {
+  SecureTokenStorage({FlutterSecureStorage? storage})
+    : _storage = storage ?? const FlutterSecureStorage();
+
+  final FlutterSecureStorage _storage;
 
   static const _accessTokenKey = 'auth_access_token';
 
-  Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
+  @override
+  Future<String?> readAccessToken() => _storage.read(key: _accessTokenKey);
 
   @override
-  Future<String?> readAccessToken() async {
-    final prefs = await _prefs;
-    return prefs.getString(_accessTokenKey);
-  }
+  Future<void> saveAccessToken(String token) =>
+      _storage.write(key: _accessTokenKey, value: token);
 
   @override
-  Future<void> saveAccessToken(String token) async {
-    final prefs = await _prefs;
-    await prefs.setString(_accessTokenKey, token);
-  }
-
-  @override
-  Future<void> clear() async {
-    final prefs = await _prefs;
-    await prefs.remove(_accessTokenKey);
-  }
+  Future<void> clear() => _storage.delete(key: _accessTokenKey);
 }

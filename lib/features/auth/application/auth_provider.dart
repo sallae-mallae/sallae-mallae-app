@@ -7,7 +7,7 @@ import '../domain/entities/auth_session.dart';
 import '../domain/repositories/auth_repository.dart';
 
 final tokenStorageProvider = Provider<TokenStorage>((ref) {
-  return const LocalTokenStorage();
+  return SecureTokenStorage();
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
