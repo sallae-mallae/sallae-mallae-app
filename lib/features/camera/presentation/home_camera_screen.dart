@@ -143,7 +143,10 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
               content: const Text('세션이 만료되었어요. 다시 로그인해 주세요.'),
               action: SnackBarAction(
                 label: '로그인',
-                onPressed: () => showLoginBottomSheet(context),
+                onPressed: () {
+                  unawaited(_speechNotifier.cancelListening());
+                  showLoginBottomSheet(context);
+                },
               ),
             ),
           );
@@ -286,6 +289,9 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
 
   void _openProfile() {
     _closeDrawer();
+    // Stop voice recognition so it doesn't keep producing text while the
+    // login/account sheet is open.
+    unawaited(_speechNotifier.cancelListening());
     final isAuthenticated =
         ref.read(authProvider).asData?.value.isAuthenticated ?? false;
     if (isAuthenticated) {
@@ -600,20 +606,18 @@ class _HomeCameraBody extends StatelessWidget {
           bottom: false,
           child: Stack(
             children: [
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: AppSpacing.figmaInputPanelHeight,
-                child: buildCameraLayer(cameraState, controller),
-              ),
+              Positioned.fill(child: buildCameraLayer(cameraState, controller)),
               if (cameraState.canShowPreview && controller != null)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: AppSpacing.figmaInputPanelHeight,
-                  child: CameraVisionOverlay(state: visionOverlayState),
+                Positioned.fill(
+                  // The overlay shares the full-screen camera coordinate space
+                  // so boxes stay aligned, but is clipped to the area above the
+                  // input panel so detection is only shown there.
+                  child: ClipRect(
+                    clipper: const _AboveInputPanelClipper(
+                      AppSpacing.figmaInputPanelHeight,
+                    ),
+                    child: CameraVisionOverlay(state: visionOverlayState),
+                  ),
                 ),
               if (messages.isNotEmpty || analysisState.isLoading)
                 Positioned(
@@ -670,6 +674,23 @@ class _HomeCameraBody extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Clips a full-screen overlay to the region above the bottom input panel.
+class _AboveInputPanelClipper extends CustomClipper<Rect> {
+  const _AboveInputPanelClipper(this.bottomInset);
+
+  final double bottomInset;
+
+  @override
+  Rect getClip(Size size) {
+    final height = (size.height - bottomInset).clamp(0.0, size.height);
+    return Rect.fromLTWH(0, 0, size.width, height);
+  }
+
+  @override
+  bool shouldReclip(_AboveInputPanelClipper oldClipper) =>
+      oldClipper.bottomInset != bottomInset;
 }
 
 class _CameraPreviewFill extends StatelessWidget {
