@@ -59,11 +59,12 @@ class AnalysisNotifier extends Notifier<AnalysisState> {
   }
 
   Future<void> analyzeProduct({
-    required XFile imageFile,
     required String question,
     required VisionContext visionContext,
-    bool saveImage = false,
-    String? aiModel,
+    XFile? imageFile,
+    int? sessionId,
+    int? userId,
+    bool proMode = false,
   }) async {
     final normalizedQuestion = question.trim();
 
@@ -81,17 +82,19 @@ class AnalysisNotifier extends Notifier<AnalysisState> {
     state = const AnalysisState(status: AnalysisStatus.loading);
 
     try {
-      final imageBase64 = await _imagePreparer.prepareBase64(imageFile);
+      // A null image tells the server to reuse the session's last photo.
+      final imageBase64 = imageFile == null
+          ? null
+          : await _imagePreparer.prepareBase64(imageFile);
       final request = AnalyzeRequest(
-        imageBase64: imageBase64,
+        sessionId: sessionId,
+        userId: userId,
         question: normalizedQuestion,
+        imageBase64: imageBase64,
+        proMode: proMode,
         context: _contextMapper.map(visionContext),
-        saveImage: saveImage,
       );
-      final response = await _analyzeProductUseCase(
-        request: request,
-        aiModel: aiModel,
-      );
+      final response = await _analyzeProductUseCase(request: request);
 
       state = AnalysisState(
         status: AnalysisStatus.success,

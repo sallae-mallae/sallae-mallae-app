@@ -7,10 +7,7 @@ class AnalyzeProductUseCase {
 
   final AnalyzeRepository _repository;
 
-  Future<AnalyzeResponse> call({
-    required AnalyzeRequest request,
-    String? aiModel,
-  }) {
-    return _repository.analyze(request: request, aiModel: aiModel);
+  Future<AnalyzeResponse> call({required AnalyzeRequest request}) {
+    return _repository.analyze(request: request);
   }
 }

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +14,7 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../features/analysis/domain/entities/analysis_result.dart';
 import '../../../features/analysis/presentation/widgets/analysis_chat_view.dart';
 import '../../../features/analysis/presentation/widgets/analysis_result_view.dart';
+import '../../../shared/purchase_intent.dart';
 import '../../../shared/widgets/account_bottom_sheet.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/app_top_bar.dart';
@@ -21,6 +24,9 @@ import '../../../shared/widgets/segmented_input_mode.dart';
 import '../../analysis/application/analysis_provider.dart';
 import '../../analysis/application/analysis_state.dart';
 import '../../auth/application/auth_provider.dart';
+import '../../chat/application/chat_rooms_provider.dart';
+import '../../chat/domain/chat_verdict_parser.dart';
+import '../../chat/domain/entities/chat_room.dart';
 import '../../history/application/history_provider.dart';
 import '../../history/application/server_history_provider.dart';
 import '../../history/domain/entities/history_item.dart';
@@ -54,6 +60,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   final List<ChatMessage> _messages = <ChatMessage>[];
   String _lastQuestion = '';
   String? _lastImagePath;
+  int? _sessionId;
   bool _isSubmitting = false;
 
   @override
@@ -177,6 +184,9 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
                 onSectionSelected: _selectSection,
                 onOpenSettings: _openSettings,
                 onOpenProfile: _openProfile,
+                onNewChat: _startNewChat,
+                chatRooms: ref.watch(chatRoomsProvider),
+                onSelectChatRoom: _openChatRoom,
               ),
             ),
           ),
@@ -282,6 +292,95 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     _closeDrawer();
   }
 
+  void _startNewChat() {
+    // Drop the current session so the next analysis starts a fresh chat room.
+    setState(() {
+      _section = AppDrawerSection.camera;
+      _sessionId = null;
+      _lastQuestion = '';
+      _lastImagePath = null;
+      _messages.clear();
+    });
+    _questionController.clear();
+    ref.read(speechInputProvider.notifier).updateQuestionText('');
+    ref.read(analysisProvider.notifier).reset();
+    _closeDrawer();
+  }
+
+  /// Writes a base64 photo to a temp file so the existing `Image.file` flow can
+  /// show it; returns the path, or null on failure.
+  String? _decodeImageToFile(String base64Image, int sessionId, int messageId) {
+    try {
+      final commaIndex = base64Image.indexOf(',');
+      final cleaned = commaIndex >= 0
+          ? base64Image.substring(commaIndex + 1)
+          : base64Image;
+      final file = File(
+        '${Directory.systemTemp.path}/chat_${sessionId}_$messageId.jpg',
+      );
+      file.writeAsBytesSync(base64Decode(cleaned));
+      return file.path;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _openChatRoom(ChatRoom room) async {
+    // Bring the user back to the camera home where the chat thread lives, then
+    // load the selected room's conversation.
+    setState(() => _section = AppDrawerSection.camera);
+    _closeDrawer();
+
+    try {
+      final detail = await ref
+          .read(chatRemoteDatasourceProvider)
+          .getSession(room.id);
+      if (!mounted) {
+        return;
+      }
+
+      final loaded = detail.messages.map((m) {
+        if (m.isUser) {
+          return ChatMessage.user(m.content);
+        }
+        final data = m.data;
+        // Prefer the structured `data`; fall back to parsing the text blob for
+        // older messages that predate it.
+        final result = data != null
+            ? analysisResultFromMessageData(data)
+            : analysisResultFromContent(m.content);
+        final imagePath = (data != null && data.imageBase64.isNotEmpty)
+            ? _decodeImageToFile(data.imageBase64, detail.id, m.id)
+            : null;
+        return ChatMessage.ai(m.content, result: result, imagePath: imagePath);
+      }).toList();
+
+      // Keep the most recent photo for the local thumbnail of follow-up turns.
+      String? lastImage;
+      for (final message in loaded) {
+        if (message.imagePath != null) {
+          lastImage = message.imagePath;
+        }
+      }
+
+      setState(() {
+        _sessionId = detail.id;
+        _lastQuestion = '';
+        _lastImagePath = lastImage;
+        _messages
+          ..clear()
+          ..addAll(loaded);
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('대화를 불러오지 못했어요.')));
+    }
+  }
+
   void _openSettings() {
     _closeDrawer();
     context.push(RoutePaths.settings);
@@ -375,7 +474,11 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     ref.read(speechInputProvider.notifier).updateQuestionText('');
 
     _lastQuestion = question;
-    await _runAnalysis(question);
+    // Send a fresh photo only for a new verdict (a purchase-intent phrase) or
+    // when there is no active session yet. Otherwise omit the image and let the
+    // server reuse the session's last photo.
+    final sendNewImage = _sessionId == null || hasPurchaseIntent(question);
+    await _runAnalysis(question, captureNewImage: sendNewImage);
   }
 
   /// Re-runs the last question without adding a new chat bubble.
@@ -383,10 +486,13 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     if (_isSubmitting || _lastQuestion.isEmpty) {
       return;
     }
-    await _runAnalysis(_lastQuestion);
+    await _runAnalysis(_lastQuestion, captureNewImage: _sessionId == null);
   }
 
-  Future<void> _runAnalysis(String question) async {
+  Future<void> _runAnalysis(
+    String question, {
+    required bool captureNewImage,
+  }) async {
     // Guard against overlapping runs (e.g. repeated voice keywords) so the
     // camera is not asked to capture several times at once.
     if (_isSubmitting) {
@@ -399,35 +505,44 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
     try {
       await ref.read(speechInputProvider.notifier).cancelListening();
 
-      final imageFile = await ref
-          .read(cameraProvider.notifier)
-          .captureRepresentativeImage();
-
-      if (imageFile == null) {
-        analysisNotifier.failWithMessage('분석할 이미지를 촬영할 수 없습니다.');
-        return;
+      // Capture a fresh photo when needed; otherwise send none so the server
+      // reuses the session's last photo (the cached path keeps driving the
+      // local thumbnail).
+      XFile? imageFile;
+      if (captureNewImage) {
+        imageFile = await ref
+            .read(cameraProvider.notifier)
+            .captureRepresentativeImage();
+        if (imageFile == null) {
+          analysisNotifier.failWithMessage('분석할 이미지를 촬영할 수 없습니다.');
+          return;
+        }
+        _lastImagePath = imageFile.path;
       }
-
-      _lastImagePath = imageFile.path;
 
       final visionContext = ref.read(visionProvider);
       final settings = ref.read(appSettingsProvider);
+      final session = ref.read(authProvider).asData?.value;
 
       await analysisNotifier.analyzeProduct(
         imageFile: imageFile,
         question: question,
         visionContext: visionContext,
-        saveImage: settings.photoServerSave,
-        aiModel: settings.aiModel.isEmpty ? null : settings.aiModel,
+        sessionId: _sessionId,
+        userId: session?.userId,
+        proMode: settings.proMode,
       );
 
       final analysisResult = ref.read(analysisProvider);
       if (analysisResult.status == AnalysisStatus.success &&
           analysisResult.result != null) {
-        final isAuthenticated =
-            ref.read(authProvider).asData?.value.isAuthenticated ?? false;
+        final result = analysisResult.result!;
+        // Track the session the server created/continued and refresh the
+        // drawer's chat room list so a new session appears there.
+        _sessionId = result.sessionId ?? _sessionId;
+        ref.invalidate(chatRoomsProvider);
 
-        if (isAuthenticated) {
+        if (session?.isAuthenticated ?? false) {
           // The server already saved this analysis; refresh the server list.
           ref.invalidate(serverHistoryProvider);
         } else {
@@ -435,9 +550,9 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
               .read(historyProvider.notifier)
               .add(
                 HistoryItem.fromResult(
-                  result: analysisResult.result!,
+                  result: result,
                   question: question,
-                  imagePath: imageFile.path,
+                  imagePath: _lastImagePath,
                   visionContext: visionContext,
                 ),
               );
@@ -624,7 +739,12 @@ class _HomeCameraBody extends StatelessWidget {
                   top: AppSpacing.topBarHeight,
                   left: 0,
                   right: 0,
-                  bottom: AppSpacing.figmaInputPanelHeight + keyboardInset,
+                  // Leave a small gap so the last bubble doesn't touch the
+                  // input panel.
+                  bottom:
+                      AppSpacing.figmaInputPanelHeight +
+                      keyboardInset +
+                      AppSpacing.md,
                   child: AnimatedOpacity(
                     duration: const Duration(milliseconds: 220),
                     // Hide the chat while the camera is detecting an object so

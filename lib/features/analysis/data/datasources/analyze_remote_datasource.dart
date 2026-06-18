@@ -6,10 +6,7 @@ import '../models/analyze_request.dart';
 import '../models/analyze_response.dart';
 
 abstract interface class AnalyzeRemoteDatasource {
-  Future<AnalyzeResponse> analyze({
-    required AnalyzeRequest request,
-    String? aiModel,
-  });
+  Future<AnalyzeResponse> analyze({required AnalyzeRequest request});
 }
 
 class DioAnalyzeRemoteDatasource implements AnalyzeRemoteDatasource {
@@ -22,18 +19,11 @@ class DioAnalyzeRemoteDatasource implements AnalyzeRemoteDatasource {
   final ApiErrorMapper errorMapper;
 
   @override
-  Future<AnalyzeResponse> analyze({
-    required AnalyzeRequest request,
-    String? aiModel,
-  }) async {
+  Future<AnalyzeResponse> analyze({required AnalyzeRequest request}) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
-        '/api/v1/analyze',
+        '/api/v1/chat/analyze',
         data: request.toJson(),
-        queryParameters: {
-          if (aiModel != null && aiModel.trim().isNotEmpty)
-            'ai_model': aiModel.trim(),
-        },
       );
 
       final data = response.data;

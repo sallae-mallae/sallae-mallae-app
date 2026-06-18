@@ -5,6 +5,7 @@ import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+import '../../../shared/purchase_intent.dart';
 import '../data/models/speech_input_state.dart';
 import 'speech_input_service.dart';
 
@@ -18,21 +19,6 @@ final speechInputProvider =
     );
 
 class SpeechInputNotifier extends Notifier<SpeechInputState> {
-  /// Purchase-intent phrases that trigger an immediate capture and analysis
-  /// while the user is still speaking. Matched after whitespace is removed.
-  static const _autoCaptureKeywords = <String>[
-    '살래말래',
-    '살래',
-    '살까',
-    '말래',
-    '말까',
-    '어때',
-    '살만',
-    '괜찮을까',
-    '필요할까',
-    '사도돼',
-  ];
-
   SpeechInputService get _service => ref.read(speechInputServiceProvider);
 
   @override
@@ -139,11 +125,6 @@ class SpeechInputNotifier extends Notifier<SpeechInputState> {
     state = state.copyWith(autoSubmitTriggered: false);
   }
 
-  bool _hasAutoCaptureKeyword(String text) {
-    final normalized = text.replaceAll(RegExp(r'\s+'), '');
-    return _autoCaptureKeywords.any(normalized.contains);
-  }
-
   void _handleResult(SpeechRecognitionResult result) {
     final recognizedWords = result.recognizedWords.trim();
 
@@ -156,7 +137,7 @@ class SpeechInputNotifier extends Notifier<SpeechInputState> {
     // partial that may cut off mid-word.
     final triggered =
         state.autoSubmitTriggered ||
-        (result.finalResult && _hasAutoCaptureKeyword(recognizedWords));
+        (result.finalResult && hasPurchaseIntent(recognizedWords));
 
     state = state.copyWith(
       questionText: recognizedWords,
