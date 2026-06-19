@@ -21,6 +21,11 @@ final speechInputProvider =
 class SpeechInputNotifier extends Notifier<SpeechInputState> {
   SpeechInputService get _service => ref.read(speechInputServiceProvider);
 
+  /// Latches once we auto-submit in a listening session, so repeated partial
+  /// results with the keyword don't fire multiple analyses. Reset on each
+  /// [startListening].
+  bool _autoSubmittedThisSession = false;
+
   @override
   SpeechInputState build() {
     ref.onDispose(() {
@@ -75,6 +80,7 @@ class SpeechInputNotifier extends Notifier<SpeechInputState> {
       return;
     }
 
+    _autoSubmittedThisSession = false;
     state = state.copyWith(
       isListening: true,
       lastRecognizedWords: '',
@@ -132,18 +138,20 @@ class SpeechInputNotifier extends Notifier<SpeechInputState> {
       return;
     }
 
-    // Only trigger once the utterance is finalized so we capture the full
-    // sentence (e.g. "살래~?") and submit the processed text, not an early
-    // partial that may cut off mid-word.
-    final triggered =
-        state.autoSubmitTriggered ||
-        (result.finalResult && hasPurchaseIntent(recognizedWords));
+    // Trigger as soon as a purchase-intent keyword is heard — even on a partial
+    // result — so the capture feels instant ("이거 살까?" → 바로 촬영). The
+    // session latch keeps it to a single submit per listening session.
+    final shouldTrigger =
+        !_autoSubmittedThisSession && hasPurchaseIntent(recognizedWords);
+    if (shouldTrigger) {
+      _autoSubmittedThisSession = true;
+    }
 
     state = state.copyWith(
       questionText: recognizedWords,
       lastRecognizedWords: recognizedWords,
       isFinalResult: result.finalResult,
-      autoSubmitTriggered: triggered,
+      autoSubmitTriggered: state.autoSubmitTriggered || shouldTrigger,
       clearErrorMessage: true,
     );
   }
