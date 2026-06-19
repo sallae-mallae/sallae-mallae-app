@@ -7,6 +7,7 @@ import '../../../app/router/route_paths.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../shared/widgets/primary_action_button.dart';
 import '../data/models/permission_state.dart';
 import '../domain/permission_provider.dart';
 
@@ -102,9 +103,9 @@ class _PermissionGuideScreenState extends ConsumerState<PermissionGuideScreen> {
                 ),
               ],
               const SizedBox(height: AppSpacing.xl),
-              _GuideAssetButton(
+              PrimaryActionButton(
                 label: isBusy ? '확인 중...' : '권한 요청하기',
-                onTap: isBusy
+                onPressed: isBusy
                     ? null
                     : () => ref
                           .read(permissionProvider.notifier)
@@ -130,44 +131,6 @@ class _PermissionGuideScreenState extends ConsumerState<PermissionGuideScreen> {
               ],
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GuideAssetButton extends StatelessWidget {
-  const _GuideAssetButton({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Semantics(
-        button: true,
-        enabled: onTap != null,
-        label: label,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Image.asset(
-              AppAssets.firstUseGuideButton,
-              width: double.infinity,
-              height: 52,
-              fit: BoxFit.fill,
-            ),
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.textInverse,
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ],
         ),
       ),
     );
