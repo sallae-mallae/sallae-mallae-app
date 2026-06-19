@@ -33,6 +33,17 @@ class ChatRoomsNotifier extends Notifier<List<ChatRoom>> {
     return _load(ref.read(authProvider).asData?.value.userId);
   }
 
+  /// Deletes a chat room: removes it from the list immediately, then calls the
+  /// server. Reloads to restore the item if the request fails.
+  Future<void> delete(int id) async {
+    state = state.where((room) => room.id != id).toList(growable: false);
+    try {
+      await _datasource.deleteSession(id);
+    } catch (_) {
+      await refresh();
+    }
+  }
+
   Future<void> _load(int? userId) async {
     try {
       final list = await _datasource.listSessions(userId: userId);

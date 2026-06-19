@@ -188,6 +188,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
                 onNewChat: _startNewChat,
                 chatRooms: ref.watch(chatRoomsProvider),
                 onSelectChatRoom: _openChatRoom,
+                onDeleteChatRoom: _deleteChatRoom,
               ),
             ),
           ),
@@ -323,6 +324,20 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
       return file.path;
     } catch (_) {
       return null;
+    }
+  }
+
+  void _deleteChatRoom(ChatRoom room) {
+    ref.read(chatRoomsProvider.notifier).delete(room.id);
+    // If the open conversation was deleted, reset the home to a fresh chat.
+    if (_sessionId == room.id) {
+      setState(() {
+        _sessionId = null;
+        _lastQuestion = '';
+        _lastImagePath = null;
+        _messages.clear();
+      });
+      ref.read(analysisProvider.notifier).reset();
     }
   }
 
