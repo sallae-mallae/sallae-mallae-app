@@ -30,7 +30,7 @@ class HistoryDecisionStyle {
         color: AppColors.consider,
         assetPath: AppAssets.gomin,
         fallbackIcon: Icons.help_rounded,
-        fallbackLabel: '조금 더 고민해봐요',
+        fallbackLabel: '애매하긴해',
       ),
       BuyDecision.avoid => const HistoryDecisionStyle(
         color: AppColors.pass,

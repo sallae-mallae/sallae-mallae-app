@@ -12,6 +12,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../features/analysis/domain/entities/analysis_result.dart';
+import '../../../features/analysis/domain/entities/buy_decision.dart';
 import '../../../features/analysis/presentation/widgets/analysis_chat_view.dart';
 import '../../../features/analysis/presentation/widgets/analysis_result_view.dart';
 import '../../../shared/purchase_intent.dart';
@@ -566,7 +567,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
   /// Reads the verdict and recommendation aloud once an analysis succeeds.
   void _speakResult(AnalysisResult result) {
     final segments = [
-      result.verdictLabel.trim(),
+      result.decision.forcedLabel ?? result.verdictLabel.trim(),
       result.recommendation.trim(),
     ].where((segment) => segment.isNotEmpty).toList();
 
@@ -582,7 +583,7 @@ class _HomeCameraScreenState extends ConsumerState<HomeCameraScreen>
 
     // Show the same text the TTS reads (verdict + recommendation) in the chat.
     final parts = [
-      result.verdictLabel.trim(),
+      result.decision.forcedLabel ?? result.verdictLabel.trim(),
       result.recommendation.trim(),
     ].where((part) => part.isNotEmpty).toList();
     final text = parts.isEmpty ? '판단을 마쳤어요.' : parts.join('\n\n');

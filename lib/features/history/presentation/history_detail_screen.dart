@@ -7,6 +7,7 @@ import '../../../app/router/route_paths.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../analysis/domain/entities/buy_decision.dart';
 import '../domain/entities/history_item.dart';
 import 'widgets/history_decision_style.dart';
 
@@ -134,9 +135,11 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = item.verdictLabel.trim().isEmpty
-        ? HistoryDecisionStyle.of(item.decision).fallbackLabel
-        : item.verdictLabel;
+    final label =
+        item.decision.forcedLabel ??
+        (item.verdictLabel.trim().isEmpty
+            ? HistoryDecisionStyle.of(item.decision).fallbackLabel
+            : item.verdictLabel);
 
     return DecoratedBox(
       decoration: BoxDecoration(

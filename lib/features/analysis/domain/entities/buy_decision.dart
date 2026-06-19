@@ -9,4 +9,8 @@ extension BuyDecisionMapper on BuyDecision {
       _ => BuyDecision.unknown,
     };
   }
+
+  /// Forces a friendlier label for the ambiguous "hold" verdict; null means use
+  /// the server/result label as-is.
+  String? get forcedLabel => this == BuyDecision.hold ? '애매하긴해' : null;
 }

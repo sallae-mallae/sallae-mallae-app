@@ -4,6 +4,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../domain/entities/analysis_result.dart';
+import '../../domain/entities/buy_decision.dart';
 
 /// A single message in the camera chat thread.
 class ChatMessage {
@@ -234,9 +235,10 @@ class _MessageBubble extends StatelessWidget {
             children: [
               if (!isUser && result != null) ...[
                 Text(
-                  result.verdictLabel.trim().isEmpty
-                      ? '판단을 마쳤어요.'
-                      : result.verdictLabel.trim(),
+                  result.decision.forcedLabel ??
+                      (result.verdictLabel.trim().isEmpty
+                          ? '판단을 마쳤어요.'
+                          : result.verdictLabel.trim()),
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 16,

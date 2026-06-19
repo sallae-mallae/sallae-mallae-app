@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../analysis/domain/entities/buy_decision.dart';
 import '../../application/server_history_provider.dart';
 import '../../data/models/server_history_item.dart';
 import '../server_history_detail_screen.dart';
@@ -12,7 +13,7 @@ import 'history_decision_style.dart';
 const _verdictFilters = <({String label, String? value})>[
   (label: '전체', value: null),
   (label: '살래', value: 'buy'),
-  (label: '고민', value: 'maybe'),
+  (label: '애매', value: 'maybe'),
   (label: '말래', value: 'no'),
 ];
 
@@ -166,9 +167,11 @@ class _ServerHistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = HistoryDecisionStyle.of(item.decision);
-    final label = item.verdictLabel.trim().isEmpty
-        ? style.fallbackLabel
-        : item.verdictLabel;
+    final label =
+        item.decision.forcedLabel ??
+        (item.verdictLabel.trim().isEmpty
+            ? style.fallbackLabel
+            : item.verdictLabel);
 
     return Material(
       color: AppColors.cardWhite,
