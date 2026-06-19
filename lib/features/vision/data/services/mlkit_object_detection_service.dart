@@ -12,7 +12,11 @@ class MlKitObjectDetectionService implements ObjectDetectionService {
           detector ??
           ObjectDetector(
             options: ObjectDetectorOptions(
-              mode: DetectionMode.stream,
+              // We sample ~1 frame/sec rather than a live video stream, so
+              // single-image mode runs full detection on every sampled frame
+              // (stream mode trades per-frame accuracy for tracking we don't
+              // use) — this captures objects far more reliably.
+              mode: DetectionMode.single,
               classifyObjects: true,
               multipleObjects: true,
             ),
