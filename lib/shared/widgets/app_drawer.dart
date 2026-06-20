@@ -18,6 +18,7 @@ class AppDrawer extends StatelessWidget {
     this.onNewChat,
     this.chatRooms = const <ChatRoom>[],
     this.onSelectChatRoom,
+    this.onDeleteChatRoom,
     super.key,
   });
 
@@ -33,6 +34,9 @@ class AppDrawer extends StatelessWidget {
   /// Saved chat rooms listed under "최근 항목"; tapping one loads it on the home.
   final List<ChatRoom> chatRooms;
   final ValueChanged<ChatRoom>? onSelectChatRoom;
+
+  /// Called when a chat room is swiped away to delete it.
+  final ValueChanged<ChatRoom>? onDeleteChatRoom;
 
   @override
   Widget build(BuildContext context) {
@@ -107,9 +111,16 @@ class AppDrawer extends StatelessWidget {
                             itemCount: chatRooms.length,
                             itemBuilder: (context, index) {
                               final room = chatRooms[index];
-                              return _ChatRoomTile(
-                                title: room.title,
-                                onTap: () => onSelectChatRoom?.call(room),
+                              return Dismissible(
+                                key: ValueKey(room.id),
+                                direction: DismissDirection.endToStart,
+                                onDismissed: (_) =>
+                                    onDeleteChatRoom?.call(room),
+                                background: const _ChatRoomDeleteBackground(),
+                                child: _ChatRoomTile(
+                                  title: room.title,
+                                  onTap: () => onSelectChatRoom?.call(room),
+                                ),
                               );
                             },
                           ),
@@ -245,6 +256,28 @@ class _NewChatChip extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ChatRoomDeleteBackground extends StatelessWidget {
+  const _ChatRoomDeleteBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.xxs),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      alignment: Alignment.centerRight,
+      decoration: BoxDecoration(
+        color: AppColors.pass.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: const Icon(
+        Icons.delete_outline_rounded,
+        color: AppColors.pass,
+        size: 22,
       ),
     );
   }

@@ -100,9 +100,16 @@ class CameraNotifier extends Notifier<CameraState> {
       await stopImageStream();
     }
 
+    // Release the on-screen detection box and reset the vision pipeline so a
+    // frame caught mid-capture can't leave it frozen.
+    ref.read(visionProvider.notifier).clearDetections();
+
     try {
       return await takePicture();
     } finally {
+      // Clear the frame guards so detection resumes cleanly after capture.
+      _isProcessingFrame = false;
+      _lastProcessedAt = null;
       if (wasStreaming && state.isInitialized) {
         await startImageStream();
       }

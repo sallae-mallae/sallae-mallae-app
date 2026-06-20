@@ -73,7 +73,7 @@ class _ResultBadgeData {
         assetPath: AppAssets.sallae,
       ),
       BuyDecision.hold => _ResultBadgeData(
-        text: label ?? '조금 더 고민',
+        text: '애매하긴해',
         color: AppColors.consider,
         assetPath: AppAssets.gomin,
       ),

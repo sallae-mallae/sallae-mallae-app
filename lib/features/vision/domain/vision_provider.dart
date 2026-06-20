@@ -31,7 +31,19 @@ class VisionNotifier extends Notifier<VisionContext> {
 
   bool _isProcessing = false;
 
+  /// Bumped whenever detections are cleared/reset so an in-flight frame that
+  /// finishes afterwards can't overwrite the cleared state.
+  int _generation = 0;
+
   bool get isProcessing => _isProcessing;
+
+  /// Clears the current detections (e.g. when a photo is captured) and resets
+  /// the processing guard so a stuck in-flight frame can't freeze the overlay.
+  void clearDetections() {
+    _generation++;
+    _isProcessing = false;
+    state = const VisionContext.empty();
+  }
 
   @override
   VisionContext build() {
@@ -57,6 +69,7 @@ class VisionNotifier extends Notifier<VisionContext> {
     }
 
     _isProcessing = true;
+    final generation = _generation;
 
     try {
       final objectDetectionService = _objectDetectionService ??=
@@ -66,18 +79,24 @@ class VisionNotifier extends Notifier<VisionContext> {
       final qualityService = _qualityService ??=
           const BasicOpenCvQualityService();
       final imageSize = Size(image.width.toDouble(), image.height.toDouble());
-      final detectedProducts = await objectDetectionService.detectProducts(
-        image: inputImage,
-        imageSize: imageSize,
-      );
-      final textRecognitionResult = await textRecognitionService.recognizeText(
-        image: inputImage,
-        imageSize: imageSize,
-      );
+      // Guard against a native ML Kit call hanging, which would otherwise leave
+      // _isProcessing stuck and freeze the live overlay until an app restart.
+      const timeout = Duration(seconds: 4);
+      final detectedProducts = await objectDetectionService
+          .detectProducts(image: inputImage, imageSize: imageSize)
+          .timeout(timeout);
+      final textRecognitionResult = await textRecognitionService
+          .recognizeText(image: inputImage, imageSize: imageSize)
+          .timeout(timeout);
       final frameQuality = await qualityService.inspectFrame(image);
       final parsedOcrCandidates = _ocrCandidateParser.parse(
         textRecognitionResult.candidates,
       );
+
+      // A clear/reset happened while we were processing — drop this stale frame.
+      if (generation != _generation) {
+        return;
+      }
 
       state = VisionContext(
         analyzedAt: DateTime.now(),

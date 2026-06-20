@@ -143,9 +143,11 @@ class _VerdictHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = result.verdictLabel.trim().isEmpty
-        ? style.fallbackLabel
-        : result.verdictLabel;
+    final label =
+        result.decision.forcedLabel ??
+        (result.verdictLabel.trim().isEmpty
+            ? style.fallbackLabel
+            : result.verdictLabel);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -342,7 +344,7 @@ class _DecisionStyle {
         color: AppColors.consider,
         assetPath: AppAssets.gomin,
         fallbackIcon: Icons.help_rounded,
-        fallbackLabel: '조금 더 고민해봐요',
+        fallbackLabel: '애매하긴해',
       ),
       BuyDecision.avoid => const _DecisionStyle(
         color: AppColors.pass,
